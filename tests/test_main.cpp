@@ -25,9 +25,7 @@ struct TestCase {
 template <typename T, typename U>
 void require_equal(const T& got, const U& want, std::string_view context) {
     if (!(got == want)) {
-        std::ostringstream msg;
-        msg << context << " mismatch";
-        throw TestFailure(msg.str());
+        throw TestFailure(std::format("{} mismatch", context));
     }
 }
 
@@ -45,9 +43,7 @@ void require_false(bool value, std::string_view context) {
 
 void require_contains(std::string_view text, std::string_view needle, std::string_view context) {
     if (text.find(needle) == std::string_view::npos) {
-        std::ostringstream msg;
-        msg << context << " expected " << text << " to contain " << needle;
-        throw TestFailure(msg.str());
+        throw TestFailure(std::format("{} expected {} to contain {}", context, text, needle));
     }
 }
 

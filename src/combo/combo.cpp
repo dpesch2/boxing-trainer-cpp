@@ -99,17 +99,19 @@ Combination parse_combination(
     const std::map<std::string, std::string>& values) {
     const auto parts = split(line, delimiter);
     if (parts.size() != field_count) {
-        std::ostringstream msg;
-        msg << "expect " << field_count << " elements delimited by \";\" in \"" << line << "\"";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format(
+            "expect {} elements delimited by \";\" in \"{}\"",
+            field_count,
+            line));
     }
 
     const auto description = trim(parts[0]);
     const auto url_it = values.find("url");
     if (url_it == values.end() || trim(url_it->second).empty()) {
-        std::ostringstream msg;
-        msg << "missing at line " << line_no << " `url` value for combination: \"" << line << "\"";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format(
+            "missing at line {} `url` value for combination: \"{}\"",
+            line_no,
+            line));
     }
 
     const auto location = trim(parts[1]);
@@ -225,9 +227,10 @@ std::string create_url_with_location(
         return append_time_param(url, cleaned);
     }
 
-    std::ostringstream msg;
-    msg << "invalid timestamp at line " << line_no << " timestamp: " << timestamp;
-    throw std::runtime_error(msg.str());
+    throw std::runtime_error(std::format(
+        "invalid timestamp at line {} timestamp: {}",
+        line_no,
+        timestamp));
 }
 
 std::string append_time_param(std::string_view url, std::string_view timestamp) {

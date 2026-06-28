@@ -364,9 +364,7 @@ std::string MainModel::header_label() const {
         favorite = "★";
     }
 
-    std::ostringstream out;
-    out << number_ << ". (" << filtered_.size() << ") " << favorite << " " << comment();
-    return out.str();
+    return std::format("{}. ({}) {} {}", number_, filtered_.size(), favorite, comment());
 }
 
 std::string MainModel::combination_name() const {
