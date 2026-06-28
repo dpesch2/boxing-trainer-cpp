@@ -9,7 +9,7 @@ This is a modern C++23 port of the Go/Fyne boxing trainer. The project uses:
 - CMake presets with Ninja.
 - Homebrew LLVM on macOS arm64.
 - C++23 named modules and `import std;`.
-- FLTK for the desktop UI, provided through vcpkg.
+- wxWidgets for the desktop UI, provided through vcpkg.
 - A small in-repo test executable driven by CTest.
 
 Treat the repository as a C++23 codebase first. Do not rewrite code toward older C++ standards for portability unless the user explicitly asks for that tradeoff.
@@ -24,7 +24,7 @@ Core parser/model tests without GUI dependencies:
 cmake --workflow --preset core-tests
 ```
 
-Desktop build and tests with vcpkg-managed FLTK:
+Desktop build and tests with vcpkg-managed wxWidgets:
 
 ```sh
 export VCPKG_ROOT="$HOME/vcpkg"
@@ -94,7 +94,7 @@ For changes to parser, model, URL handling, or shared utilities, run:
 cmake --workflow --preset core-tests
 ```
 
-For changes that affect FLTK UI code, CMake/vcpkg configuration, or the final executable, also run:
+For changes that affect wxWidgets UI code, CMake/vcpkg configuration, or the final executable, also run:
 
 ```sh
 cmake --workflow --preset desktop-vcpkg

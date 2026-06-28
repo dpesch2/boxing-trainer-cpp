@@ -1,22 +1,23 @@
 module;
 
-#include <FL/Fl.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Double_Window.H>
-#include <FL/Fl_Group.H>
-#include <FL/Fl_Hold_Browser.H>
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Round_Button.H>
-#include <FL/Fl_Scroll.H>
-#include <FL/fl_ask.H>
+#include <wx/button.h>
+#include <wx/listbox.h>
+#include <wx/msgdlg.h>
+#include <wx/panel.h>
+#include <wx/radiobox.h>
+#include <wx/scrolwin.h>
+#include <wx/sizer.h>
+#include <wx/srchctrl.h>
+#include <wx/stattext.h>
+#include <wx/timer.h>
+#include <wx/utils.h>
+#include <wx/wx.h>
 
 module boxing_trainer.app;
 
 import std;
 import boxing_trainer.combo;
 import boxing_trainer.model;
-import boxing_trainer.text;
 import boxing_trainer.video_url;
 
 namespace boxing_trainer::view {
@@ -25,116 +26,83 @@ namespace {
 
 constexpr int window_width = 1200;
 constexpr int window_height = 720;
-constexpr int margin = 10;
+constexpr int margin = 16;
+constexpr int gap = 8;
 
-void set_widget_label(Fl_Widget& widget, std::string_view text) {
-    widget.copy_label(std::string{text}.c_str());
+[[nodiscard]] wxString to_wx(std::string_view text) {
+    const std::string copy{text};
+    return wxString::FromUTF8(copy.c_str());
 }
 
-void open_url(std::string_view url) {
-#ifdef _WIN32
-    const auto command = "start \"\" " + text::shell_quote(url);
-#elif defined(__APPLE__)
-    const auto command = "open " + text::shell_quote(url);
-#else
-    const auto command = "xdg-open " + text::shell_quote(url);
-#endif
-    (void)std::system(command.c_str());
+[[nodiscard]] std::string from_wx(const wxString& text) {
+    return text.ToStdString(wxConvUTF8);
+}
+
+[[nodiscard]] int filter_to_index(model::FilterSelection selection) noexcept {
+    switch (selection) {
+    case model::FilterSelection::yes:
+        return 1;
+    case model::FilterSelection::no:
+        return 2;
+    case model::FilterSelection::all:
+    default:
+        return 0;
+    }
+}
+
+[[nodiscard]] model::FilterSelection index_to_filter(int index) noexcept {
+    switch (index) {
+    case 1:
+        return model::FilterSelection::yes;
+    case 2:
+        return model::FilterSelection::no;
+    case 0:
+    default:
+        return model::FilterSelection::all;
+    }
+}
+
+[[nodiscard]] wxFont make_font(int point_size, bool bold = false) {
+    auto font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    font.SetPointSize(point_size);
+    font.SetWeight(bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL);
+    return font;
 }
 
 } // namespace
 
-class TrainerWindow final : public Fl_Double_Window {
+class TrainerFrame final : public wxFrame {
 public:
-    explicit TrainerWindow(std::vector<combo::Combination> data)
-        : Fl_Double_Window(window_width, window_height, "Boxing Trainer")
-        , model_{std::move(data)} {
-        resizable(this);
+    explicit TrainerFrame(std::vector<combo::Combination> data)
+        : wxFrame(nullptr, wxID_ANY, "Boxing Trainer", wxDefaultPosition, wxSize(window_width, window_height))
+        , model_{std::move(data)}
+        , defense_timer_{this} {
+        root_ = new wxPanel(this);
+        root_->SetWindowStyle(root_->GetWindowStyle() | wxWANTS_CHARS);
+
+        Bind(wxEVT_CHAR_HOOK, &TrainerFrame::on_char_hook, this);
+        Bind(wxEVT_TIMER, &TrainerFrame::on_defense_timer, this);
+
         rebuild();
         schedule_timer();
-    }
-
-    ~TrainerWindow() override {
-        Fl::remove_timeout(timer_callback, this);
-    }
-
-    int handle(int event) override {
-        if (event != FL_KEYDOWN) {
-            return Fl_Double_Window::handle(event);
-        }
-
-        const auto key = Fl::event_key();
-        const auto text = Fl::event_text() != nullptr ? std::string{Fl::event_text()} : std::string{};
-        const auto active = model_.active_view();
-
-        try {
-            if (active == model::ActiveView::main && key == FL_Left) {
-                model_.main().previous();
-                rebuild();
-                return 1;
-            }
-            if (active == model::ActiveView::main && key == FL_Right) {
-                model_.main().next();
-                rebuild();
-                return 1;
-            }
-            if (active == model::ActiveView::main && key == ' ') {
-                model_.main().toggle_favorite();
-                rebuild();
-                return 1;
-            }
-
-            const auto ch = text.empty() ? '\0' : static_cast<char>(std::toupper(static_cast<unsigned char>(text.front())));
-            if (active == model::ActiveView::main && ch == 'F') {
-                model_.main().toggle_favorite();
-                rebuild();
-                return 1;
-            }
-            if (active == model::ActiveView::main && ch == 'S') {
-                toggle_search();
-                return 1;
-            }
-            if (active == model::ActiveView::main && ch == 'H') {
-                show_current_combination_video();
-                return 1;
-            }
-            if (ch == 'D') {
-                model_.set_active_view(model::ActiveView::defense);
-                rebuild();
-                return 1;
-            }
-            if (ch == 'I') {
-                model_.set_active_view(model::ActiveView::info);
-                rebuild();
-                return 1;
-            }
-            if (ch == 'C') {
-                model_.set_active_view(model::ActiveView::main);
-                rebuild();
-                return 1;
-            }
-        } catch (const std::exception& err) {
-            show_error(err);
-            return 1;
-        }
-
-        return Fl_Double_Window::handle(event);
     }
 
 private:
     using Callback = std::function<void()>;
 
-    struct SearchFocusState {
-        int position = 0;
-        int mark = 0;
-    };
-
     void rebuild() {
-        rebuilding_ = true;
-        focus_after_rebuild_ = nullptr;
-        callbacks_.clear();
-        clear();
-        begin();
+        header_label_ = nullptr;
+        combination_label_ = nullptr;
+        title_label_ = nullptr;
+        search_ = nullptr;
+        list_ = nullptr;
+
+        root_->Freeze();
+        root_->SetSizer(nullptr, false);
+        root_->DestroyChildren();
+
+        root_sizer_ = new wxBoxSizer(wxVERTICAL);
+        root_->SetSizer(root_sizer_);
 
         switch (model_.active_view()) {
         case model::ActiveView::info:
@@ -149,379 +117,504 @@ private:
             break;
         }
 
-        end();
-        if (focus_after_rebuild_ != nullptr) {
-            focus_after_rebuild_->take_focus();
-        }
-        redraw();
-        search_focus_after_rebuild_.reset();
-        focus_after_rebuild_ = nullptr;
-        rebuilding_ = false;
+        root_->Layout();
+        root_->Thaw();
+        Layout();
     }
 
     void build_main_view() {
         add_main_header();
+        add_main_buttons();
+        add_search_control();
+        add_main_filters();
+        add_combination_list();
+        update_main_view();
+    }
 
-        const auto button_count = 9;
-        const auto gap = 4;
-        const auto button_y = 180;
-        const auto button_h = 34;
-        const auto button_w = (w() - (2 * margin) - ((button_count - 1) * gap)) / button_count;
-        int x = margin;
-
-        add_button(x, button_y, button_w, button_h, "Next [->]", [this] {
+    void add_main_buttons() {
+        auto* row = new wxBoxSizer(wxHORIZONTAL);
+        add_button(*row, "Next [->]", [this] {
             model_.main().next();
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Previous [<-]", [this] {
+        add_button(*row, "Previous [<-]", [this] {
             model_.main().previous();
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Shuffle", [this] {
+        add_button(*row, "Shuffle", [this] {
             model_.main().reset_in_random_order();
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "In Order", [this] {
+        add_button(*row, "In Order", [this] {
             model_.main().reset_in_order();
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Show [H]", [this] { show_current_combination_video(); });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Info [I]", [this] {
+        add_button(*row, "Show [H]", [this] { show_current_combination_video(); });
+        add_button(*row, "Info [I]", [this] {
             model_.set_active_view(model::ActiveView::info);
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Favorite [F]", [this] {
+        add_button(*row, "Favorite [F]", [this] {
             model_.main().toggle_favorite();
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Defense [D]", [this] {
+        add_button(*row, "Defense [D]", [this] {
             model_.set_active_view(model::ActiveView::defense);
             rebuild();
         });
-        x += button_w + gap;
-        add_button(x, button_y, button_w, button_h, "Search [S]", [this] { toggle_search(); });
+        add_button(*row, "Search [S]", [this] { toggle_search(); });
 
-        int y = button_y + button_h + 8;
-        if (search_visible_) {
-            auto* input = new Fl_Input(margin, y, w() - (2 * margin), 30);
-            input->copy_label("Search");
-            input->value(std::string{model_.main().search_query()}.c_str());
-            input->when(FL_WHEN_CHANGED);
-            bind(*input, [this, input] {
-                if (!rebuilding_) {
-                    search_focus_after_rebuild_ = SearchFocusState{
-                        .position = input->position(),
-                        .mark = input->mark(),
-                    };
-                    model_.main().set_search_query(input->value());
-                    rebuild();
-                }
-            });
-            restore_search_focus(*input);
-            y += 38;
+        root_sizer_->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, margin);
+    }
+
+    void add_search_control() {
+        if (!search_visible_) {
+            return;
         }
 
+        search_ = new wxSearchCtrl(root_, wxID_ANY, to_wx(model_.main().search_query()), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+        search_->ShowCancelButton(true);
+        search_->SetDescriptiveText("Search");
+        search_->SetFocus();
+        search_->SetInsertionPointEnd();
+        search_->Bind(wxEVT_TEXT, [this](wxCommandEvent&) {
+            handle_action([this] {
+                model_.main().set_search_query(from_wx(search_->GetValue()));
+                update_main_view();
+            });
+        });
+        search_->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, [this](wxCommandEvent&) {
+            handle_action([this] {
+                search_->SetValue({});
+                model_.main().set_search_query({});
+                update_main_view();
+            });
+        });
+
+        root_sizer_->Add(search_, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, margin);
+    }
+
+    void add_main_filters() {
         const auto selection = model_.main().selection();
-        const auto filter_w = (w() - (2 * margin) - (2 * gap)) / 3;
-        add_selection_group(margin, y, filter_w, 54, "Long", selection.long_range, [this](auto value) {
+        auto* grid = new wxFlexGridSizer(2, 3, gap, gap);
+        for (int col = 0; col < 3; ++col) {
+            grid->AddGrowableCol(col, 1);
+        }
+
+        add_filter_box(*grid, "Long", selection.long_range, [this](auto value) {
             auto selection = model_.main().selection();
             selection.long_range = value;
             model_.main().set_selection(selection);
             rebuild();
         });
-        add_selection_group(margin + filter_w + gap, y, filter_w, 54, "Defense", selection.defense, [this](auto value) {
+        add_filter_box(*grid, "Defense", selection.defense, [this](auto value) {
             auto selection = model_.main().selection();
             selection.defense = value;
             model_.main().set_selection(selection);
             rebuild();
         });
-        add_selection_group(margin + ((filter_w + gap) * 2), y, filter_w, 54, "Faint", selection.feint, [this](auto value) {
+        add_filter_box(*grid, "Faint", selection.feint, [this](auto value) {
             auto selection = model_.main().selection();
             selection.feint = value;
             model_.main().set_selection(selection);
             rebuild();
         });
-        y += 58;
-        add_selection_group(margin, y, filter_w, 54, "Body", selection.body, [this](auto value) {
+        add_filter_box(*grid, "Body", selection.body, [this](auto value) {
             auto selection = model_.main().selection();
             selection.body = value;
             model_.main().set_selection(selection);
             rebuild();
         });
-        add_selection_group(margin + filter_w + gap, y, filter_w, 54, "Counter", selection.counter, [this](auto value) {
+        add_filter_box(*grid, "Counter", selection.counter, [this](auto value) {
             auto selection = model_.main().selection();
             selection.counter = value;
             model_.main().set_selection(selection);
             rebuild();
         });
-        add_selection_group(margin + ((filter_w + gap) * 2), y, filter_w, 54, "Favorites", selection.favorites, [this](auto value) {
+        add_filter_box(*grid, "Favorites", selection.favorites, [this](auto value) {
             auto selection = model_.main().selection();
             selection.favorites = value;
             model_.main().set_selection(selection);
             rebuild();
         });
-        y += 64;
 
-        auto* list = new Fl_Hold_Browser(margin, y, w() - (2 * margin), h() - y - margin);
-        int index = 1;
-        for (const auto& item : model_.main().combinations()) {
-            list->add(item.label().c_str());
-            if (index - 1 == model_.main().current()) {
-                list->select(index);
-            }
-            ++index;
-        }
-        bind(*list, [this, list] {
-            if (!rebuilding_ && list->value() > 0) {
-                model_.main().set(list->value() - 1);
-                rebuild();
-            }
+        root_sizer_->Add(grid, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, margin);
+    }
+
+    void add_combination_list() {
+        list_ = new wxListBox(root_, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_SINGLE | wxLB_NEEDED_SB);
+        list_->SetFont(make_font(15));
+        list_->Bind(wxEVT_LISTBOX, [this](wxCommandEvent&) {
+            handle_action([this] {
+                const auto selected = list_->GetSelection();
+                if (selected != wxNOT_FOUND) {
+                    model_.main().set(selected);
+                    update_main_view();
+                }
+            });
         });
+        root_sizer_->Add(list_, 1, wxEXPAND | wxALL, margin);
     }
 
     void build_info_view() {
         add_main_header();
-        add_button(margin, 180, w() - (2 * margin), 34, "Close [C]", [this] {
+        add_button(*root_sizer_, "Close [C]", [this] {
             model_.set_active_view(model::ActiveView::main);
             rebuild();
-        });
+        }, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, margin);
 
-        auto* scroll = new Fl_Scroll(margin, 224, w() - (2 * margin), h() - 234);
-        scroll->box(FL_DOWN_FRAME);
-        scroll->begin();
+        auto* scroll = new wxScrolledWindow(root_, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxBORDER_SIMPLE);
+        scroll->SetScrollRate(0, 10);
+        auto* scroll_sizer = new wxBoxSizer(wxVERTICAL);
+        scroll->SetSizer(scroll_sizer);
 
-        int y = 10;
         try {
             const auto& current = model_.main().current_combination().combination.get();
             for (const auto& [key, value] : current.values) {
-                add_scroll_text(*scroll, y, key + ": " + value);
-                y += 28;
+                add_scroll_text(*scroll, *scroll_sizer, key + ": " + value);
             }
 
-            add_scroll_text(*scroll, y, "position: " + current.position);
-            y += 28;
+            add_scroll_text(*scroll, *scroll_sizer, "position: " + current.position);
 
             const auto& features = current.features;
             const std::string distance = features.is_long ? "long" : "short";
             add_scroll_text(
                 *scroll,
-                y,
+                *scroll_sizer,
                 "distance: " + distance
                     + ", defense: " + model::yes_no_to_bool(features.has_defense)
                     + ", body: " + model::yes_no_to_bool(features.targets_body)
                     + ", faint: " + model::yes_no_to_bool(features.is_feint));
-            y += 34;
 
             if (const auto url = video_url(current.url)) {
-                auto* open = new Fl_Button(10, y, 140, 30, "Open video");
-                bind(*open, [url] { open_url(*url); });
-                scroll->add(open);
+                auto* open = new wxButton(scroll, wxID_ANY, "Open video");
+                open->Bind(wxEVT_BUTTON, [this, url](wxCommandEvent&) {
+                    handle_action([url] { wxLaunchDefaultBrowser(to_wx(*url)); });
+                });
+                scroll_sizer->Add(open, 0, wxTOP, gap);
             }
         } catch (const std::exception&) {
         }
 
-        scroll->end();
+        root_sizer_->Add(scroll, 1, wxEXPAND | wxALL, margin);
     }
 
     void build_defense_view() {
         add_defense_header();
-        add_button(margin, 180, (w() - (2 * margin) - 4) / 2, 34, model_.defense().pause() ? "Start" : "Pause", [this] {
+
+        auto* row = new wxBoxSizer(wxHORIZONTAL);
+        add_button(*row, model_.defense().pause() ? "Start" : "Pause", [this] {
             model_.defense().toggle_pause();
             rebuild();
         });
-        add_button(margin + ((w() - (2 * margin) - 4) / 2) + 4, 180, (w() - (2 * margin) - 4) / 2, 34, "Close [C]", [this] {
+        add_button(*row, "Close [C]", [this] {
             model_.set_active_view(model::ActiveView::main);
             rebuild();
         });
+        root_sizer_->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, margin);
 
         const auto selection = model_.defense().selection();
-        const auto filter_w = (w() - (2 * margin) - 4) / 2;
-        add_selection_group(margin, 230, filter_w, 54, "Long", selection.long_range, [this](auto value) {
+        auto* grid = new wxFlexGridSizer(1, 2, gap, gap);
+        grid->AddGrowableCol(0, 1);
+        grid->AddGrowableCol(1, 1);
+
+        add_filter_box(*grid, "Long", selection.long_range, [this](auto value) {
             auto selection = model_.defense().selection();
             selection.long_range = value;
             selection.body = model::FilterSelection::all;
             model_.defense().set_selection(selection);
             rebuild();
         });
-        add_selection_group(margin + filter_w + 4, 230, filter_w, 54, "Body", selection.body, [this](auto value) {
+        add_filter_box(*grid, "Body", selection.body, [this](auto value) {
             auto selection = model_.defense().selection();
             selection.body = value;
             selection.long_range = model::FilterSelection::all;
             model_.defense().set_selection(selection);
             rebuild();
         });
+
+        root_sizer_->Add(grid, 0, wxEXPAND | wxALL, margin);
     }
 
     void add_main_header() {
-        try {
-            (void)model_.main().current_combination();
-            add_text(margin, 10, w() - (2 * margin), 46, model_.main().header_label(), 34);
-            add_text(margin, 56, w() - (2 * margin), 82, model_.main().combination_name(), 56, true);
-            add_text(margin, 146, w() - (2 * margin), 28, model_.main().title(), 16);
-        } catch (const std::exception&) {
-            add_text(margin, 10, w() - (2 * margin), 46, "No combination selected", 34);
-            add_text(margin, 56, w() - (2 * margin), 82, "", 56, true);
-            add_text(margin, 146, w() - (2 * margin), 28, "", 16);
-        }
+        header_label_ = add_text(34);
+        combination_label_ = add_text(56, true);
+        title_label_ = add_text(16);
+        update_main_header();
     }
 
     void add_defense_header() {
-        add_text(margin, 10, w() - (2 * margin), 46, model_.defense().header_label(), 34);
-        add_text(margin, 56, w() - (2 * margin), 100, model_.defense().combination_name(), 64, true);
+        header_label_ = add_text(34);
+        combination_label_ = add_text(64, true);
+        header_label_->SetLabel(to_wx(model_.defense().header_label()));
+        combination_label_->SetLabel(to_wx(model_.defense().combination_name()));
     }
 
-    void add_text(int x, int y, int width, int height, std::string_view text, int size, bool bold = false) {
-        auto* box = new Fl_Box(x, y, width, height);
-        set_widget_label(*box, text);
-        box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE | FL_ALIGN_CLIP);
-        box->labelsize(size);
-        if (bold) {
-            box->labelfont(FL_BOLD);
-        }
+    wxStaticText* add_text(int point_size, bool bold = false) {
+        auto* text = new wxStaticText(root_, wxID_ANY, {});
+        text->SetFont(make_font(point_size, bold));
+        root_sizer_->Add(text, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, root_sizer_->IsEmpty() ? margin : 2);
+        return text;
     }
 
-    void add_scroll_text(Fl_Scroll& scroll, int y, std::string_view text) {
-        auto* box = new Fl_Box(10, y, scroll.w() - 30, 24);
-        set_widget_label(*box, text);
-        box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE | FL_ALIGN_CLIP);
-        box->labelsize(15);
-        scroll.add(box);
+    void add_scroll_text(wxWindow& parent, wxSizer& sizer, std::string_view text) {
+        auto* label = new wxStaticText(&parent, wxID_ANY, to_wx(text));
+        label->SetFont(make_font(15));
+        sizer.Add(label, 0, wxEXPAND | wxBOTTOM, gap);
     }
 
-    void add_button(int x, int y, int width, int height, std::string_view text, Callback callback) {
-        auto* button = new Fl_Button(x, y, width, height);
-        set_widget_label(*button, text);
-        bind(*button, std::move(callback));
+    void add_button(
+        wxSizer& sizer,
+        std::string_view text,
+        Callback callback,
+        int proportion = 1,
+        int flags = wxEXPAND | wxRIGHT,
+        int border = gap) {
+        auto* button = new wxButton(root_, wxID_ANY, to_wx(text));
+        button->Bind(wxEVT_BUTTON, [this, callback = std::move(callback)](wxCommandEvent&) {
+            handle_action(callback);
+        });
+        sizer.Add(button, proportion, flags, border);
     }
 
-    void add_selection_group(
-        int x,
-        int y,
-        int width,
-        int height,
+    void add_filter_box(
+        wxSizer& sizer,
         std::string_view label,
         model::FilterSelection selected,
         std::function<void(model::FilterSelection)> on_change) {
-        auto* group = new Fl_Group(x, y, width, height);
-        group->box(FL_THIN_UP_FRAME);
-        group->begin();
+        wxArrayString choices;
+        choices.Add("All");
+        choices.Add("Yes");
+        choices.Add("No");
 
-        auto* title = new Fl_Box(x + 8, y + 6, 80, 20);
-        set_widget_label(*title, std::string{label} + ":");
-        title->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-
-        const auto button_w = 68;
-        const auto start_x = x + 86;
-        add_radio(start_x, y + 6, button_w, 22, "All", selected == model::FilterSelection::all, [on_change] {
-            on_change(model::FilterSelection::all);
+        auto* box = new wxRadioBox(
+            root_,
+            wxID_ANY,
+            to_wx(label),
+            wxDefaultPosition,
+            wxDefaultSize,
+            choices,
+            1,
+            wxRA_SPECIFY_ROWS);
+        box->SetSelection(filter_to_index(selected));
+        box->Bind(wxEVT_RADIOBOX, [this, box, on_change = std::move(on_change)](wxCommandEvent&) {
+            handle_action([&] { on_change(index_to_filter(box->GetSelection())); });
         });
-        add_radio(start_x + button_w, y + 6, button_w, 22, "Yes", selected == model::FilterSelection::yes, [on_change] {
-            on_change(model::FilterSelection::yes);
-        });
-        add_radio(start_x + (button_w * 2), y + 6, button_w, 22, "No", selected == model::FilterSelection::no, [on_change] {
-            on_change(model::FilterSelection::no);
-        });
-
-        group->end();
+        sizer.Add(box, 1, wxEXPAND);
     }
 
-    void add_radio(int x, int y, int width, int height, std::string_view label, bool selected, Callback callback) {
-        auto* radio = new Fl_Round_Button(x, y, width, height);
-        set_widget_label(*radio, label);
-        radio->type(FL_RADIO_BUTTON);
-        radio->value(selected ? 1 : 0);
-        bind(*radio, std::move(callback));
+    void update_main_view() {
+        update_main_header();
+        update_combination_list();
+        root_->Layout();
     }
 
-    void bind(Fl_Widget& widget, Callback callback) {
-        callbacks_.push_back(std::make_unique<Callback>(std::move(callback)));
-        widget.callback(widget_callback, callbacks_.back().get());
+    void update_main_header() {
+        if (header_label_ == nullptr || combination_label_ == nullptr || title_label_ == nullptr) {
+            return;
+        }
+
+        try {
+            (void)model_.main().current_combination();
+            header_label_->SetLabel(to_wx(model_.main().header_label()));
+            combination_label_->SetLabel(to_wx(model_.main().combination_name()));
+            title_label_->SetLabel(to_wx(model_.main().title()));
+        } catch (const std::exception&) {
+            header_label_->SetLabel("No combination selected");
+            combination_label_->SetLabel({});
+            title_label_->SetLabel({});
+        }
     }
 
-    static void widget_callback(Fl_Widget*, void* data) {
-        (*static_cast<Callback*>(data))();
+    void update_combination_list() {
+        if (list_ == nullptr) {
+            return;
+        }
+
+        list_->Freeze();
+        list_->Clear();
+        for (const auto& item : model_.main().combinations()) {
+            list_->Append(to_wx(item.label()));
+        }
+        if (!model_.main().combinations().empty()) {
+            list_->SetSelection(model_.main().current());
+        }
+        list_->Thaw();
     }
 
     void toggle_search() {
         search_visible_ = !search_visible_;
         if (!search_visible_) {
             model_.main().set_search_query("");
-        } else {
-            const auto end_position = static_cast<int>(model_.main().search_query().size());
-            search_focus_after_rebuild_ = SearchFocusState{
-                .position = end_position,
-                .mark = end_position,
-            };
         }
         rebuild();
     }
 
-    void restore_search_focus(Fl_Input& input) {
-        if (!search_focus_after_rebuild_) {
+    void show_current_combination_video() {
+        const auto& current = model_.main().current_combination().combination.get();
+        if (const auto url = video_url(current.url)) {
+            if (!wxLaunchDefaultBrowser(to_wx(*url))) {
+                throw std::runtime_error("could not open video URL");
+            }
+        }
+    }
+
+    void on_char_hook(wxKeyEvent& event) {
+        if (search_has_focus()) {
+            event.Skip();
             return;
         }
 
-        const auto max_position = static_cast<int>(std::string_view{input.value()}.size());
-        const auto position = std::clamp(search_focus_after_rebuild_->position, 0, max_position);
-        const auto mark = std::clamp(search_focus_after_rebuild_->mark, 0, max_position);
-        input.position(position, mark);
-        focus_after_rebuild_ = &input;
+        try {
+            const auto active = model_.active_view();
+            const auto key = event.GetKeyCode();
+            if (active == model::ActiveView::main && key == WXK_LEFT) {
+                model_.main().previous();
+                rebuild();
+                return;
+            }
+            if (active == model::ActiveView::main && key == WXK_RIGHT) {
+                model_.main().next();
+                rebuild();
+                return;
+            }
+            if (active == model::ActiveView::main && key == WXK_SPACE) {
+                model_.main().toggle_favorite();
+                rebuild();
+                return;
+            }
+
+            const auto ch = key >= 0 && key <= 255
+                ? static_cast<char>(std::toupper(static_cast<unsigned char>(key)))
+                : '\0';
+            if (active == model::ActiveView::main && ch == 'F') {
+                model_.main().toggle_favorite();
+                rebuild();
+                return;
+            }
+            if (active == model::ActiveView::main && ch == 'S') {
+                toggle_search();
+                return;
+            }
+            if (active == model::ActiveView::main && ch == 'H') {
+                show_current_combination_video();
+                return;
+            }
+            if (ch == 'D') {
+                model_.set_active_view(model::ActiveView::defense);
+                rebuild();
+                return;
+            }
+            if (ch == 'I') {
+                model_.set_active_view(model::ActiveView::info);
+                rebuild();
+                return;
+            }
+            if (ch == 'C') {
+                model_.set_active_view(model::ActiveView::main);
+                rebuild();
+                return;
+            }
+        } catch (const std::exception& err) {
+            show_error(err);
+            return;
+        }
+
+        event.Skip();
     }
 
-    void show_current_combination_video() {
-        try {
-            const auto& current = model_.main().current_combination().combination.get();
-            if (const auto url = video_url(current.url)) {
-                open_url(*url);
+    [[nodiscard]] bool search_has_focus() const {
+        for (auto* focus = wxWindow::FindFocus(); focus != nullptr; focus = focus->GetParent()) {
+            if (focus == search_) {
+                return true;
             }
+        }
+        return false;
+    }
+
+    void schedule_timer() {
+        defense_timer_.Start(static_cast<int>(model::next_delay().count()), wxTIMER_ONE_SHOT);
+    }
+
+    void on_defense_timer(wxTimerEvent&) {
+        if (model_.active_view() == model::ActiveView::defense && !model_.defense().pause()) {
+            model_.defense().next_attack();
+            wxBell();
+            rebuild();
+        }
+        schedule_timer();
+    }
+
+    template <typename Fn>
+    void handle_action(Fn&& fn) {
+        try {
+            std::forward<Fn>(fn)();
         } catch (const std::exception& err) {
             show_error(err);
         }
     }
 
     void show_error(const std::exception& err) {
-        fl_alert("%s", err.what());
-    }
-
-    void schedule_timer() {
-        Fl::add_timeout(model::next_delay().count() / 1000.0, timer_callback, this);
-    }
-
-    static void timer_callback(void* data) {
-        auto& self = *static_cast<TrainerWindow*>(data);
-        if (self.model_.active_view() == model::ActiveView::defense && !self.model_.defense().pause()) {
-            self.model_.defense().next_attack();
-            fl_beep(FL_BEEP_DEFAULT);
-            self.rebuild();
-        }
-        self.schedule_timer();
+        wxMessageBox(to_wx(err.what()), "Boxing Trainer", wxOK | wxICON_ERROR, this);
     }
 
     model::Model model_;
+    wxTimer defense_timer_;
+    wxPanel* root_ = nullptr;
+    wxBoxSizer* root_sizer_ = nullptr;
+    wxStaticText* header_label_ = nullptr;
+    wxStaticText* combination_label_ = nullptr;
+    wxStaticText* title_label_ = nullptr;
+    wxSearchCtrl* search_ = nullptr;
+    wxListBox* list_ = nullptr;
     bool search_visible_ = false;
-    bool rebuilding_ = false;
-    std::optional<SearchFocusState> search_focus_after_rebuild_;
-    Fl_Input* focus_after_rebuild_ = nullptr;
-    std::vector<std::unique_ptr<Callback>> callbacks_;
+};
+
+class TrainerApp final : public wxApp {
+public:
+    explicit TrainerApp(std::vector<combo::Combination> data)
+        : data_{std::move(data)} {}
+
+    bool OnInit() override {
+        try {
+            auto* frame = new TrainerFrame(std::move(data_));
+            frame->Show(true);
+            SetTopWindow(frame);
+            return true;
+        } catch (const std::exception& err) {
+            wxMessageBox(to_wx(err.what()), "Boxing Trainer", wxOK | wxICON_ERROR);
+            return false;
+        }
+    }
+
+private:
+    std::vector<combo::Combination> data_;
 };
 
 int run_desktop_app(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
-
     try {
-        auto window = std::make_unique<TrainerWindow>(combo::load_data());
-        window->show();
-        return Fl::run();
+        auto* app = new TrainerApp(combo::load_data());
+        wxApp::SetInstance(app);
+
+        int arg_count = argc;
+        if (!wxEntryStart(arg_count, argv)) {
+            wxApp::SetInstance(nullptr);
+            delete app;
+            return 1;
+        }
+
+        if (!wxTheApp->CallOnInit()) {
+            wxTheApp->OnExit();
+            wxEntryCleanup();
+            return 1;
+        }
+
+        const auto result = wxTheApp->OnRun();
+        wxTheApp->OnExit();
+        wxEntryCleanup();
+        return result;
     } catch (const std::exception& err) {
-        fl_alert("%s", err.what());
+        std::fprintf(stderr, "Boxing Trainer: %s\n", err.what());
         return 1;
     }
 }

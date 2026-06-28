@@ -8,7 +8,7 @@ project(boxing_trainer_cpp
     DESCRIPTION "Modern C++ port of boxing-trainer-go"
     LANGUAGES CXX)
 
-option(BOXING_TRAINER_BUILD_GUI "Build the FLTK desktop application" ON)
+option(BOXING_TRAINER_BUILD_GUI "Build the wxWidgets desktop application" ON)
 
 function(boxing_trainer_enable_cxx23_modules target_name visibility)
     target_compile_features(${target_name} ${visibility} cxx_std_23)
@@ -63,15 +63,8 @@ if(BOXING_TRAINER_BUILD_GUI)
     boxing_trainer_enable_cxx23_modules(boxing_trainer_cpp PRIVATE)
     boxing_trainer_enable_project_warnings(boxing_trainer_cpp)
 
-    find_package(FLTK CONFIG REQUIRED)
-    if(TARGET fltk)
-        target_link_libraries(boxing_trainer_cpp PRIVATE fltk)
-    elseif(TARGET FLTK::fltk)
-        target_link_libraries(boxing_trainer_cpp PRIVATE FLTK::fltk)
-    else()
-        target_include_directories(boxing_trainer_cpp PRIVATE ${FLTK_INCLUDE_DIRS} ${FLTK_INCLUDE_DIR})
-        target_link_libraries(boxing_trainer_cpp PRIVATE ${FLTK_LIBRARIES} ${FLTK_LIBRARY})
-    endif()
+    find_package(wxWidgets CONFIG REQUIRED)
+    target_link_libraries(boxing_trainer_cpp PRIVATE wx::core wx::base)
 
     install(TARGETS boxing_trainer_cpp RUNTIME DESTINATION bin)
     install(DIRECTORY resources/ DESTINATION share/boxing-trainer-cpp)

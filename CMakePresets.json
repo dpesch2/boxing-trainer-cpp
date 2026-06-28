@@ -24,7 +24,7 @@
     },
     {
       "name": "desktop-vcpkg",
-      "displayName": "Desktop app with vcpkg-managed FLTK",
+      "displayName": "Desktop app with vcpkg-managed wxWidgets",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
@@ -44,7 +44,7 @@
     },
     {
       "name": "desktop-release-vcpkg",
-      "displayName": "Size-optimized release desktop app with vcpkg-managed FLTK",
+      "displayName": "Size-optimized release desktop app with vcpkg-managed wxWidgets",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build-release",
       "cacheVariables": {

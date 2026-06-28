@@ -4,4 +4,6 @@ set(VCPKG_LIBRARY_LINKAGE static)
 
 set(VCPKG_CMAKE_SYSTEM_NAME Darwin)
 set(VCPKG_OSX_ARCHITECTURES arm64)
+set(VCPKG_OSX_SYSROOT macosx)
+set(VCPKG_OSX_DEPLOYMENT_TARGET 14.0)
 set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/../cmake/toolchains/homebrew-llvm-toolchain.cmake")
