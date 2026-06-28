@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: macOS arm64 CMake presets
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/.vcpkg
+      VCPKG_COMMIT: a0400024711b283056538ac19ced80b91a83c24c
+      VCPKG_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install llvm cmake ninja
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ env.VCPKG_COMMIT }}-${{ hashFiles('vcpkg.json', 'vcpkg-triplets/*.cmake', 'cmake/toolchains/*.cmake') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ env.VCPKG_COMMIT }}-
+
+      - name: Bootstrap vcpkg
+        run: |
+          git init "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" remote add origin https://github.com/microsoft/vcpkg.git
+          git -C "$VCPKG_ROOT" fetch --depth 1 origin "$VCPKG_COMMIT"
+          git -C "$VCPKG_ROOT" checkout FETCH_HEAD
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh"
+          mkdir -p "$VCPKG_BINARY_CACHE"
+
+      - name: Show tool versions
+        run: |
+          /opt/homebrew/opt/llvm/bin/clang++ --version
+          /opt/homebrew/opt/llvm/bin/clang-scan-deps --version
+          cmake --version
+          ninja --version
+          "$VCPKG_ROOT/vcpkg" version
+
+      - name: Build and test core
+        run: cmake --workflow --preset core-tests
+
+      - name: Build and test desktop app
+        run: cmake --workflow --preset desktop-vcpkg
+
+      - name: Build release desktop app
+        run: cmake --workflow --preset desktop-release-vcpkg
