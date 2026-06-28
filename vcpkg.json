@@ -1,0 +1,11 @@
+{
+  "name": "boxing-trainer-cpp",
+  "version-string": "0.1.0",
+  "description": "Modern C++/FLTK port of boxing-trainer-go.",
+  "dependencies": [
+    {
+      "name": "fltk",
+      "default-features": false
+    }
+  ]
+}

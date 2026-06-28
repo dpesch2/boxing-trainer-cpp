@@ -1,0 +1,11 @@
+/build/
+/build-*/
+
+# CMake-generated files. These are machine-local and may contain absolute paths.
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile
+.ninja_deps
+.ninja_log

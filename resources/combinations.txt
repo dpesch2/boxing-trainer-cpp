@@ -1,0 +1,640 @@
+###############################################################################################
+# Boxing Trainer Combinations
+###############################################################################################
+
+# Format:
+#   Variables:
+#     var var1 var2 # define existence of variables
+#     url=X  # set url variables to avoid repeating
+#   Fields:
+#     combination; position; comment
+
+var author
+var title
+var url
+
+### Explanation ###
+# 1 = jab
+# 2 = cross
+# 3 = lead (left) hook
+# 4 = rear (right) hook
+# 5 = lead (left) uppercut
+# 6 = rear (right) uppercut
+# 7 = lead (left) overhand
+# 8 = rear (right) overhand
+# Xb = body punch
+# fX = faint punch
+# Rslip = right slip
+# Lslip = left slip
+# RslipS = right slip step
+# LslipS = left slip step
+# stepB = step back
+# leanB = lean back
+# Rroll = right roll
+# Lroll = left roll
+# RrollS = right roll step
+# LrollS = left roll step
+# LsideS = left side step
+# RsideS = right side step
+# Lpivot = left pivot
+# Rpivot = right pivot
+# LpalmB = left palm block
+# RpalmB = right palm block
+# LelbowB = left elbow block
+# RelbowB = right elbow block
+# LforearmB = left forearm block
+# RforearmB = right forearm block
+# Lparry = left parry
+# Rparry = right parry
+# duck = duck under punch
+# X-Y = do X then do Y
+# X+Y = do X then do Y, separated to logical blocks for longer combinations or separate setups
+# X_Y = do X and Y in the same time
+# X|Y = alternative = do X or Y
+# Nx(X) = X repeated N times, usualy for setup
+# counter_X = defense and counter for X
+
+###############################################################################################
+author=Tony Jeffries
+
+# How to Throw a 1 - 2 / Jab - Cross in Boxing
+# First Combinations You Should Learn in Boxing
+# 3 Realistic Boxing Combinations you Should Practice
+# 4 Realistic Boxing Combinations you Should Master
+# 57 Realistic Boxing Combinations You Should Practice
+# Mike Tyson’s Deadliest Combos (Breakdown)
+# 10 Punch Boxing Combo (Advanced) on the Heavy Bag | Boxing Combos For Beginners
+# 8 Uppercut Boxing Combos with Tony Jeffries
+# 11 Advanced Punch Boxing Combos on Heavy Bag | Boxing Combinations
+# 11 Punch Advanced Boxing Combination for the Heavy Bag | Boxing Bag Combos
+# Advanced Boxing Mitt Work Combination by Kevan Watson & Tony Jeffries
+# 4 "Head - Body" BOXING COMBINATIONS That You Should DO!
+# 4 Realistic Boxing Combinations You Should Train for Real Fights
+# 3 Realistic Boxing Combinations you should Practice - Part 3
+# 4 Best Boxing Combinations against Southpaw Boxers
+# Olympic Boxer Reveals Secret to Beat Short, Powerful Fighters
+# 3 Realistic Boxing Combinations for Real Fights!
+# How to Throw the Left Hook Punch in a Boxing Combination on Heavy Bag
+# How to Throw a Knockout Punch in Boxing | KO PUNCH
+# 3 Power Punch Combinations you Should Practice on the Heavy Bag
+# 4 Speed Punch Boxing Combinations you Should Practice
+# The Best Combination you Should Master NOW!
+# Impossible Boxing Combo that Works
+# 3 Boxing Combination Punches You NEED to Know (from Champion Boxer)
+# INSTANTLY Improve with these Boxing Combinations
+# 3 combos to Knockout ANYONE
+# My 5 Favorite "Power Punch" Combinations in Boxing
+# Realistic Boxing Combinations You Should Practice | Mitt Work for Real Fighters
+# Advanced Boxing Combo You Can Learn in 10 Minutes
+# 50 boxing combos starting with the cross
+# 21 Body punching combos from an Olympic medallist
+# Top 20 Boxing Combos Starting with the Hook
+# 4 Inside Boxing Combinations That Actually Work
+
+
+
+title=How to Throw a 1 - 2 / Jab - Cross in Boxing
+url=https://www.youtube.com/watch?v=vyTaKpylOcU
+# combination;   position;   comment
+1-2;             9m16s;  with steps
+
+title=First Combinations You Should Learn in Boxing
+url=https://www.youtube.com/watch?v=9oN2RCx5peY
+# combination;                 position;  comment
+1-2-1-1-2;                     18s;       for cutting distance
+1-1-2b-3;                      1m23s;
+1-2-1-2;                       2m45s;     for power
+
+title=3 Realistic Boxing Combinations you Should Practice
+url=https://www.youtube.com/watch?v=faMatiHL6WY
+# combination;            position;   comment
+6-3b;                     47s;
+1-2-3-3b;                 1m20s;
+1-LslipS-3b-3b-3;         2m06s;
+1-leanB-1-2-1;            3m02s;
+
+title=4 Realistic Boxing Combinations you Should Master
+url=https://www.youtube.com/watch?v=lfNuwnRcVDg
+# combination;                position;   comment
+1-1-2-stepB-2;                9s;
+1-2-1-4;                      1m36s;
+setup 2x1b f1b-3-2;           2m32s;      fake with eyes
+setup close 1-2-1-2-1-2+3b-4; 4m53s;
+
+title=57 Realistic Boxing Combinations You Should Practice
+url=https://www.youtube.com/watch?v=93r6lz1pbcw
+# combination;                              position;   comment
+1-1-2-stepB-2;                              30s;        finding range
+1-2-1-4;                                    1m29s;      make oponent cover
+setup 2x1b f1b-3-2;                         2m25s;      with looking to the eyes
+setup 1-2-1-2-1-2+3b-4;                     3m48s;      fast light close setup
+1-2+1-1-2;                                  4m48s;      for cutting distance
+1-1-2b-3;                                   5m55s;
+1-2-1-2;                                    6m55s;      for power
+3b-4b-3-4-3b-4b-3-4;                        10m08s;
+setup 1-2-1-2-3-2+3b-4b;                    10m49s;     fast light close setup
+1-2-3b-3b-3b-3-2;                           11m50s;
+1-1-2b;                                     12m52s;     with second step to the left
+6-3b;                                       13m52s;     without slip
+setup 1-2-1-2+3b;                           15m12s;     fast light close setup until guard is rised, without slip
+setup 1-2-3-2-3-2+3b;                       15m29s;     fast light close setup until guard is rised, without slip
+1-Lslip-3b-3-2-Lslip-3b-3b;                 15m43s;
+1-4-5-2;                                    16m40s;     1-4 is decoy to open the hands
+3-6-3;                                      17m38s;     with steps
+6-3-stepB-2-3;                              18m12s;     inside
+5-6-3-4;                                    18m38s;     insides
+1-LslipS-5-2;                               18m53s;     1 without step
+1-RslipS-6-3;                               19m21s;
+6-3-3b;                                     19m43s;
+1-2-1;                                      20m55s;     cutting distance, power in last punch
+1-2-1-4b-3;                                 22m44s;
+1-2-leanB-2b-3;                             23m55s;
+f1-2b-3b-3;                                 24m33s;     all setup shots for 3
+1-2-3-4-3b-4b-3-4;                          25m46s;     unrealistic but great on bag
+1-1-Lslip-3b-3;                             26m30s;
+setup 1-2-1-6+3b;                           28m36s;     fast light setup, without slip
+1-2-RsideS-2-3;                             30m02s;
+1-2b-3-3;                                   30m11s;
+3-2;                                        31m26s;     long, with stepping
+3-3b;                                       32m30s;     with and without slip
+3-4b-3b-4-RsideS-2-3-2-3b-4b-3-4;           34m00s;
+6-3b;                                       35m49s;     close
+1-short_2-light_3-3b;                       36m14s;     from range with step, setup for 3b
+1-LslipS-3b-3b-3;                           37m03s;
+1-leanB-1-2-1;                              37m55s;     1-2-1 with stepping for cutting distance
+
+title=Mike Tyson’s Deadliest Combos (Breakdown)
+url=https://www.youtube.com/watch?v=8Hk_v9wouxI
+# combination;                      position;   comment
+1-1-Lroll-Rroll-Lroll+3-2;          1m17s;      with steps
+Rslip-Lslip-Rslip-Lslip+gazelle_3; 3m34s;       with steps
+1-2-RrollS+2-3b;                    5m48s;      with steps
+1-1-6-3-2-3;                        7m19s;      with steps
+
+title=10 Punch Boxing Combo (Advanced) on the Heavy Bag | Boxing Combos For Beginners
+url=https://www.youtube.com/watch?v=0qecdwj6VAY
+# combination;                              position;   comment
+1-stepB-2-1-2+RrollS_3b+2-1-2-3-3b;         17s;        three part combination
+
+title=8 Uppercut Boxing Combos with Tony Jeffries
+url=https://www.youtube.com/watch?v=xfedkS_apnY
+# combination;                  position;   comment
+6-3b;                           17s;
+1-4-5-2;                        34s;        get closer with 4, 1-4 is decoy to open the hands
+3-6-3;                          1m33s;      step with first 3, 3 open the guard for 6
+6-3-stepB-2-3;                  2m06s;      inside
+5-6-3-4;                        2m32s;      inside
+1-LslipS-5-2;                   2m50s;
+1-RslipS-6-3;                   3m17s;
+6-3-3b;                         3m39s;      6-3 are light decoy just for 3b
+
+title=11 Advanced Punch Boxing Combos on Heavy Bag | Boxing Combinations
+url=https://www.youtube.com/watch?v=PdxaVOMO0Sg
+# combination;                                           position;   comment
+3-4b-3b-4-RsideS-2-3-2-3b-4b-3-4;                        16s;
+
+title=11 Punch Advanced Boxing Combination for the Heavy Bag | Boxing Bag Combos
+url=https://www.youtube.com/watch?v=F8YAVtvzeck
+# combination;                                position;   comment
+1-2-leanB-2-3b-Lpivot_3+2-3-2-3b-3b-3;        17s;       two part combo
+
+title=4 "Head - Body" BOXING COMBINATIONS That You Should DO!
+url=https://www.youtube.com/watch?v=fJaMA3FfB5M
+# combination;              position;   comment
+1-2b-3;                     30s;
+4b-3b-4b-3;                 1m07s;      inside, for tall oponent
+1-2-3-4-3b-4b;              1m50s;      inside, for shorter oponent
+1-1-2-3b;                   2m25s;
+1-1-2-3b-3-4b;              3m03s;      if 3b is bolcked follow up variant
+
+title=4 Realistic Boxing Combinations You Should Train for Real Fights
+url=https://www.youtube.com/watch?v=9U-JX2Ik8TQ
+# combination;                position;   comment
+1-2-RsideS-2;                 51s;        1-2 block the vision
+2-3-RsideS-3b;                1m44s;      2-3 make oponent cover head
+f1-long_3-2;                  2m36s;      step with light 3 to get momentum for hard 2
+6-3b-3b;                      4m00s;
+
+title=3 Realistic Boxing Combinations you should Practice - Part 3
+url=https://www.youtube.com/watch?v=XGaDQaZvjFg
+# combination;            position;   comment
+f1-1-2-5;                 48s;        oponent against ropes, 5 splits guard
+6-3-3;                    1m29s;      inside, 3-3 around guard
+1-6-Lpivot_3-1-1-2;       2m17s;
+
+title=4 Best Boxing Combinations against Southpaw Boxers
+url=https://www.youtube.com/watch?v=-I0LtEab9zQ
+# combination;           position;   comment
+1-1-2b-Lpivot;           1m20s;      against southpaw, 2 with step outside, pivot out as defense
+1-2-3-6b;                1m46s;      against southpaw who covers up, 1-2-3 forces guard up
+setup 2x1b f1b-3-2;       2m10s;      with steps
+1-2-step_Lpivot_3-1-2;   2m56s;
+
+title=Olympic Boxer Reveals Secret to Beat Short, Powerful Fighters
+url=https://www.youtube.com/watch?v=W_MferbJJzo
+# combination;                                position;   comment
+1-stepB-1-2-stepB-6-escape_right;             1m57s;      for shorter aggresive opponent, escape with right guard up to avoid 3
+6-3-3b;                                       4m50s;      with and without slip left, for shorter aggresive opponeent
+1-2-5-escape_right;                           6m17s;      for shorter aggresive opponent
+f1-1-2-escape_right;                          7m07s;      for shorter aggresive opponent
+1-stepB-screw_1-2-escape_right;               7m53s;      for shorter aggresive opponent
+1-2-3b-3-2-escape_right;                      8m55s;      for shorter aggresive opponent
+
+title=3 Realistic Boxing Combinations for Real Fights!
+url=https://www.youtube.com/watch?v=Z5BaiOPLDc0
+# combination;               position;   comment
+1-2-1-1-2;                   43s;        cutting distance
+1-2-leanB-2b-3;              1m18s;      lean back defend 1
+f1-2b-3b-3;                  2m02s;      2b-3b force guard down, setup for 3
+1-2-3-4-3b-4b-3-4;           3m37s;      unrealistic but fun
+
+title=How to Throw the Left Hook Punch in a Boxing Combination on Heavy Bag
+url=https://www.youtube.com/watch?v=QDR8JIk60ZI
+# combination;             position;   comment
+3-2-3;                     56s;
+3-3b;                      47s;
+3-2-3b;                    1m04s;
+3b-3-2;                    1m10s;
+3-LsideS-3;                1m16s;
+3-2-3-3;                   1m20s;
+3-2-3-3b;                  1m25s;
+3-2-LsideS-3-2;            1m30s;
+3-3b-3b;                   1m37s;
+3-6b-3-2;                  1m42s;      bolo to the body
+3-4b-3b;                   1m51s;
+3-Lslip-3b-3-2;            1m57s;
+3b-3b-3b;                  2m06s;
+3b-4b-3b-4b;               2m12s;
+3b-4b-3b-4b-3b-4b-3;       2m17s;
+3-2-stepB-2-1-2;           2m31s;
+3-6b-3-3;                  2m49s;      bolo to the body
+Lslip-3b-3b;               3m02s;      defend 2
+RsideS-LsideS-3-2b;        3m31s;      Tyson
+
+title=How to Throw a Knockout Punch in Boxing | KO PUNCH
+url=https://www.youtube.com/watch?v=OYGFt63aMLg
+# combination;             position;   comment
+f1-1-8;           1m48s;      profibox KO
+3b-4b-3b-4b-3;             2m55s;
+setup 2x1 f1-long_3-2;     3m31s;
+
+title=3 Power Punch Combinations you Should Practice on the Heavy Bag
+url=https://www.youtube.com/watch?v=zLnkF9Hacvc
+# combination;                             position;   comment
+close light setup 1-2-1-2+3b-4b-3b-4b-3;   44s;        light head, hard body shots
+setup playing long 1,3 2-3b-3b;            1m31s;      touching 1,3 as comming back 1 or 3 hard 2 with slip left
+1-stepB-1-2;                               2m25s;      opponenet thinks retret buy comming back with 1-2
+
+title=4 Speed Punch Boxing Combinations you Should Practice
+url=https://www.youtube.com/watch?v=yyN2PXSds5I
+# combination;             position;   comment
+1-2-1-1-2;                 5s;
+3b-4b-3-4-3b-4b-3-4;       57s;
+setup 1-2-1-2+3-2-3b-4b;   1m38s;      light fast 1-2-1-2, on the ropes
+1-2-3b-3b-3b-3-2;          2m41s;
+
+title=The Best Combination you Should Master NOW!
+url=https://www.youtube.com/watch?v=f1Tpf4BGcuo
+# combination;             position;   comment
+1-2-1;                     44s;        cutting distance with steps, on the ropes in place, force on last 1
+1-2-1-4b;                  2m36s;      on ropes, 1-2-1 force guard up
+1-2-1-4b-3;                2m36s;      on ropes, 4b force guard down
+
+title=Impossible Boxing Combo that Works
+url=https://www.youtube.com/watch?v=G3Ow1iiEgZo
+# combination;             position;   comment
+1-1-Lslip-3b;              31s;        if 1-1 force guard up
+6-3b;                      3m12s;      without slip
+setup 1-2-1-6-3b;          3m12s;      without slip
+
+title=3 Boxing Combination Punches You NEED to Know (from Champion Boxer)
+url=https://www.youtube.com/watch?v=W-TSeZWs1Nc
+# combination;                            position;   comment
+1-short_2-3b-3b-3;                        58s;
+1-2b-3-2-3;                               1m20s;
+1-2-3-2b-1;                               1m35s;
+1-2-3-2+1-1-2+1-2;                        2m19s;      Manny Paquialo combo
+1-2-3-short_2-3b-3b-3b;                   3m57s;
+1-1-2+3b-4b-3b-4b-3-2+RsideS-2;           4m37s;
+
+title=INSTANTLY Improve with these Boxing Combinations
+url=https://www.youtube.com/watch?v=jkoIm--92Ww
+# combination;             position;   comment
+long_3-2;                  58s;        long 3 opens guard for 2
+setup 2x1b f1b-long_3-2;   1m37s;
+setup 1,2,3x(3b-4b)-3;     2m18s;      body shots setup until guard is down for 3
+3-3b;                      4m08s;      no slip for 3 or 3b
+setup 1,2,3x(1-2)-3b;      5m30s;      fast close setup for 3
+
+title=3 combos to Knockout ANYONE
+url=https://www.youtube.com/watch?v=F-E8RakjCMQ
+# combination;             position;   comment
+1-1-2b;                    50s;        with steps, second step to the right
+6-3b;                      1m49s;      without slip left, decoy 6
+setup 1-2-3-2-3-2+3b;      3m22s;      without slip left, until guard is up
+1-Lslip-3b-3-2-3b-3b;      4m14s;
+
+title=My 5 Favorite "Power Punch" Combinations in Boxing
+url=https://www.youtube.com/watch?v=V2rJtQY_bxo
+# combination;             position;   comment
+1-2-1-4;                   32s;        force cover center then punch around guard
+1-2-RsideS-2-3;            1m00s;
+1-2b-3-3;                  1m34s;
+long_3-2;                  2m12s;
+3-3b;                      3m29s;      without slip
+
+title=Realistic Boxing Combinations You Should Practice | Mitt Work for Real Fighters
+url=https://www.youtube.com/watch?v=8H0REG_UmAc
+# combination;                                       position;   comment
+1-2-Rslip-Lslip-Rroll+2-3-2+stepB-6-3-2+1-1-2        ;28s;
+
+title=Advanced Boxing Combo You Can Learn in 10 Minutes
+url=https://www.youtube.com/shorts/ptSpzuvCmw4
+# combination;      position;   comment
+3-4b-RsideS-2-3-2;  0s;         step with long 3
+
+title=50 boxing combos starting with the cross
+url=https://www.youtube.com/watch?v=aP3pJM7__-A
+# combination;                position;   comment
+2-3-2;                        16s;
+2-3-3b;                       19s;
+2-Rslip-2-3;                  22s;
+2-3-Lslip-3b;                 25s;
+2-3b;                         28s;
+2-3b-4b;                      31s;
+2-3b-3;                       34s;
+2-3b-3b;                      37s;
+2-3b-3b-3b;                   40s;
+2-5;                          43s;
+2-5-2;                        46s;
+2-2-3;                        47s;
+2-2-3b;                       51s;
+2-Rslip-Lslip-3;              54s;
+2-Rslip-Lslip-3-2;            58s;
+2-Rroll-2;                    1m01s;
+2-Rroll-2-3;                  1m04s;
+2-Rroll-2-3-3b;               1m07s;
+2-RsideS-2;                   1m12s;
+2-RsideS-2-3;                 1m15s;
+2-RsideS-2-3b;                1m19s;
+2-4b;                         1m23s;
+2-4b-3b;                      1m26s;
+2-leanB-2;                    1m31s;
+2-leanB-2-3;                  1m33s;
+2-leanB-2-3b;                 1m37s;
+2-RsideS_3b;                  1m41s;      side step with 3b
+2-RforearmB-3b;               1m44s;      block 1/3 from opponenet
+2-RforearmB-3;                1m47s;      block 1/3 from opponenet
+2-RforearmB-3b-4b;            1m50s;      block 1/3 from opponenet
+2-RforearmB-3-4b;             1m54s;      block 1/3 from opponenet
+2-RrollS-2;                   1m58s;
+2-RrollS_3b-2;                2m02s;      roll with step and 3b
+2-RrollS_3b;                  2m07s;      roll with step and 3b
+2-Lpivot-2;                   2m10s;      second cross with small step
+2-Lpivot-2-3;                 2m13s;      second cross with small step
+2-3b-3;                       2m17s;
+2b-3;                         2m19s;
+2b-3-Lslip-3;                 2m22s;
+2b-3-Lslip-3-2;               2m26s;
+2b-3b-3b;                     2m31s;
+2-3-4b-3b;                    2m34s;
+2-3-4-3b-4b;                  2m41s;
+2-Lslip-3-4-3b;               2m44s;
+2-Rslip-Lslip-3-3b;           2m48s;
+2-Rslip-Lslip-3-4b-3b;        2m53s;
+2-Rpivot-3b;                  2m59s;
+2-Rpivot-3b-4b-3;             3m02s;
+2-1-2;                        3m07s;
+2-1-2-3;                      3m09s;
+
+
+title=21 Body punching combos from an Olympic medallist
+url=https://www.youtube.com/watch?v=hg9Ktk1TDlQ
+# combination;             position;   comment
+3b-4b;                     15s;
+4b-3b;                     17s;
+1b-Lslip-3b;               19s;
+1b-4b;                     23s;
+2b-6b;                     26s;
+2b-3b;                     29s;
+Rslip-4b-4b;               32s;
+Rslip-4b-3b;               35s;
+6b-6b;                     39s;
+6b-5b;                     41s;
+5b-4b;                     45s;
+Lslip-3b-3b;               48s;
+Lslip-3b-3b-3b;            52s;
+3b-4b-3b;                  55s;
+3b-6b;                     59s;
+3b-3b-4b;                  1m02s;
+5b-6b-3b;                  1m06s;
+5b-6b-3b-4b;               1m10s;
+4b-3b-3b-3b;               1m15s;
+4b-3b-3b-4b;               1m20s;
+3b-4b-3b-4b-3b;            1m24s;
+3b-4b-RsideS-3b;           1m26s;
+3b-4b-RsideS-3b-4b;        1m31s;
+5x(3b-4b);                 1m36s;
+
+title=Top 20 Boxing Combos Starting with the Hook
+url=https://www.youtube.com/watch?v=r7WV0J_dWdA
+# combination;             position;   comment
+3-2;                       22s;
+3-3b;                      24s;
+3-2-3b;                    27s;
+3b-3-2;                    31s;
+3-RsideS-3;                34s;
+3-2-3-3;                   38s;
+3-2-3-3b;                  41s;
+3-2-RsideS-3-2;            46s;
+3-3b-3b;                   51s;
+3-6b-3-2;                  54s;       bolo to the body
+3-4b-3b;                   58s;
+3b-4b-3;                   1m02s;
+3-Lslip-3b-3-2;            1m06s;
+3b-3b-3b;                  1m12s;
+3b-4b-3b-4b;               1m14s;
+3b-4b-3b-4b-3b-4b-3;       1m17s;
+3-2-stepB-2-1-2;           1m25s;
+3-6b-3-3;                  1m29s;
+Lslip-3b-3b;               1m33s;
+Rstep-Lstep-3;             1m41s;     Mike Tyson
+
+title=How to Change The Angle in Boxing When Fighting Inside
+url=https://www.youtube.com/watch?v=oplciEKdU3E
+# combination;             position;   comment
+1-2-RsideS_3b;             1m23s;       changing angle
+1-2-RsideS-2-3b;           1m58s;      changing angle
+1-2-3-LsideS_4b-pivotL_3;  2m41s;      changing angle
+1-2-3-RhopS-3b;            3m08s;      changing angle with hop step
+
+title=4 Realistic Boxing Combinations You Should Practice
+url=https://www.youtube.com/watch?v=S4qG4v77YE8
+# combination;             position;   comment
+1-2-3-3b;                  32s;        3b with slip
+6-3-2-Lslip-3b;            1m13s;
+1-1-2-3;                   1m50s;      moving forward
+1-2-Rblock-6-3;            2m27s;      block 3b from opponenet
+5-6-3-2;                   3m43s;
+1-2-RsideS-2-3;            4m29s;      2 covers vision for side step
+2-3-2-3b;                  6m49s;
+1-Lslip-3-2-3;             7m37s;      slip defends counter 2
+1-2-Rslip-2-3;             8m06s;      slip defends counter 1, counter 8
+1-2-stepB-6-3;             8m37s;      step back could be doubled for aggresive opponenet
+
+title=4 Inside Boxing Combinations That Actually Work
+url=https://www.youtube.com/watch?v=w63E2WJyKvE
+# combination;                   position;   comment
+1-2-Rslip-Lslip-3-short_2-3b;    1m28s;      moving forward while slipping
+1-2-RrollS-2-3b;                 3m53s;      rolls step to angle
+1-2-RrollS_3b-2-3b;              5m02s;      body punch while roll stepping
+Nx(3b-4b)-3;                     7m13s;      repeat until guard is down
+Nx(1-2)-6-3b;                    9m29s;      insite, repeat until guard is up
+6-3b-3b;                         11m15s;
+6-3-3b;                          11m35s;     add 3 if uppercut is not enough to rise the guard
+6-3-2-3b;                        11m40s;     add 3-2 if uppercut is not enough to rise the guard
+1-1-2-3b-3-2;                    11m27s;     cut the distance, get inside
+1-2-1-3b-3-2;                    13m26s;     cut the distance, get inside
+
+title=Advanced Boxing Punches Coaches NEVER Teach
+url=https://www.youtube.com/watch?v=pIiJRubdtt8
+# combination;                   position;   comment
+Halfway Out 1;                   24s;        Floyd Mayweather speed jab
+Screw 1;                         1m07s;      
+Constant Range Finder 1;         1m45s;      Klitschko style
+Blindig 1;                       2m23s;
+Up 1;                            3m22s;
+Shuffle Step 2;                  4m14s;
+Screw 2;                         6m15s;
+Halfway Out 2;                   7m29s;
+Step Out Overhand 2;             8m29s;
+Step 2;                          10m29s;
+Chopping 2;                      11m15s;
+Pivot 3;                         13m26s;
+Check 3;                         15m06s;
+Dip Punch;                       15m44s;     Mike Tyson
+Gazelle 3;                       16m42s;
+Short Range Power 3;             18m33s;
+Touch 3;                         19m31s;     Setting up the Body Shot: 3-3b without slip  
+Step 5,6;                        20m46s;
+Arm Pull 5,6;                    21m46s;     Pull oppenent arm down and punch uppercut with other hand
+Touch 6;                         22m31s;     Setting up the Body Shot: 6-3b without slip
+Bolo 6,6b;                       23m03s;
+
+title=Do This For 7 Days And You'll Never Get Hit Again (Counters)
+url=https://www.youtube.com/watch?v=Zd2tmwpujyE
+# combination;                   position;   comment
+SlipR-2;                         7m29s;
+RollL-3;                         7m35s;
+1-stepB-1-2;                     7m41s;
+SlipR-RoollL-3-2;                7m48s;                 
+SlipL-RollR-2-3-2;               7m48s;
+ParryR-1;                        8m03s;
+1-stepB-1-2;                     8m08s;
+
+#####################################################################################
+author=Kevin Hickey
+# BOXING | faints
+# BOXING COACHING MANUAL UK ABA | faints
+# BOXING COACHING MANUAL UK ABA | counters
+
+title=BOXING | faints
+url=https://archive.org/details/boxing0000unse/page/24/mode/2up?view=theater
+# combination;       position;   comment
+setup 2x1b f1b-2;    24;         if oponent is lowering hand to parry 1b
+
+title=BOXING COACHING MANUAL UK ABA | faints
+url=https://openlibrary.org/works/OL27677314W/Boxing?edition=key%3A/books/OL37750087M
+# combination;       position;   comment
+f1-1b;               150;
+f1-2b;               150;
+f1b-1;               150;
+f1b-3;               150;
+f2-3;                150;
+f2-3b;               150;
+f2b-1;               150;
+
+title=BOXING COACHING MANUAL UK ABA | counters
+url=https://openlibrary.org/works/OL27677314W/Boxing?edition=key%3A/books/OL37750087M
+# combination;                 position;   comment
+counter_1 RpalmB-1|1b|3|5;     104;
+counter_1 Rparry-1|1b|3;       104;
+counter_1 stepB-step_1|2|3;    104;
+counter_1 leanB-1|2|3|6;       104;
+counter_1 Rslip_1|1b;          104;
+counter_1 Rslip-2|6|6b;        104;
+counter_1 Lslip-3|3b|5|5b;     104;
+counter_1 Lslip_8|2b; 104;
+counter_1 Lrolling-1|3;        104;
+counter_1 Rrolling-2|4;        104;
+counter_1 Rstep-2|4|5|6;       104;
+counter_1b LelbowB-2|6;        104;
+counter_1b RelbowB-1;          104;        jab or left cross
+counter_1b stepB-step_1|2|3;   104;
+counter_2 LpalmB-2|6;          104;
+counter_2 Lparry-2|2b|4;       104;
+counter_2 stepB-step_1|2|6;    104;
+counter_2 leanB-1|2|3|6;       104;
+counter_2 Lslip-3|3b;          104;
+counter_2 Rslip-2|2b|4b|6;     104;
+counter_2b LelbowB-2|6;        104;
+counter_2b stepB-step_1|2|6;   104;
+counter_3 RforearmB-1|1b|3|5;  104;
+counter_3 duck_1b|2b;          104;        Ducking under 3
+counter_3 leanB-1|2|5|6;       104;
+counter_3 stepB-step_1|2|3;    104;
+counter_3b RelbowB-1|3|5;      104;
+counter_3b stepB-step_1|2|3;   104;
+counter_4 LforearmB-2|4|6;     105;
+counter_4 stepB-step_1|2;      105;
+counter_4 leanB-1|2|3|6;       105;
+counter_4 duck_2b;             105;        Ducking under 4
+counter_4 duck-3b|6;           105;        Ducking under 4
+counter_5|6 leanB-1|2|3|4;     105;
+counter_5|6 stepB-step_1|2|3;  105;
+counter_5b|6b RelbowB-1|3;     105;
+counter_5b|6b LelbowB-2|6;     105;
+
+#####################################################################################
+author=Skillr Boxing
+# Learn Boxers Favorite COMBINATIONS
+# Learn PROVEN combinations that ACTUALLY work in boxing
+# Learn Punch Numbering 1-8 (with REAL Boxing EXAMPLES)
+# The Most EFFECTIVE Counterpunches Used by Elite Boxers (With Real Fight Examples)
+
+title=Learn Boxers Favorite COMBINATIONS
+url=https://www.youtube.com/watch?v=vxEF-7WobEs
+# combination;                 position;   comment
+3-3b;                          1m14s;      Canelo Alvarez
+1-4;                           2m03s;      Maywether, Fury, 1 could be doubled or to body
+1-2-1-2;                       3m15s;      Dmitry Bivol, could be phase attack 1-2, 2 could be body
+1-6;                           4m54s;      Lyndon Arthur
+1b-2;                          5m54s;      Anthony Joshua
+6-3b;                          6m45s;      Golovkin, Canelo
+
+title=Learn PROVEN combinations that ACTUALLY work in boxing
+url=https://www.youtube.com/watch?v=G5E_jw78XE4
+# combination;                 position;   comment
+1-2;                           50s;        Deontay Wilder
+3b-8;                          2m07s;      Curmel Moton
+1-4b-3b;                       3m28s;      Errol Spencer
+1-2-1;                         4m30s;      Manny Pacquiao
+1-1-8;                         5m33s;      Canelo Alvarez
+1-4b;                          6m57s;      Rey Vargas, 1 could be doubled
+4b-6/3b-5;                     8m07s;      Subriel Mathias, close range
+
+title=Learn Punch Numbering 1-8 (with REAL Boxing EXAMPLES)
+url=https://www.youtube.com/watch?v=01tPxAVB87Q
+# combination;                 position;   comment
+Lslip-5/Rslip-6;               17m03s;    Gervonta Davis, inside/outside slip base on openent stance
+pullB-6;                       18m31s;    Canelo Alvarez, punish overextended oponent
+block-3;                       19m30s;    David Benavidez, block with high guard
+slipL-1/8;                     20m57s;    Manny Rodiguez
+shoulderR-6;                   22m11s;    Celeb Plant
+level_change-3/4;              23m04s;    Isaac Cruz - get under oponeent punches
+stepB-1-2;                     25m34s;    Bivol, Cruz
+rollL-3;                       26m34s;    Mike Tyson
+slipL-3;                       27m46s;    David Haney
+slipR-2;                       28m41s;    Canelo Alvarez
+pullB-2;                       29m29s;    Ali, Maywether
+slipL-5-2;                     30m31s;    Manual Marquez

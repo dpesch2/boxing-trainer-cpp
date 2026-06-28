@@ -1,0 +1,150 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "core-tests",
+      "displayName": "Core tests without GUI dependencies",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-core",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "/opt/homebrew/opt/llvm/bin/clang-scan-deps",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "ON",
+        "CMAKE_CXX_MODULE_STD": "ON",
+        "CMAKE_CXX_STDLIB_MODULES_JSON": "/opt/homebrew/opt/llvm/lib/c++/libc++.modules.json",
+        "BOXING_TRAINER_BUILD_GUI": "OFF",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "desktop-vcpkg",
+      "displayName": "Desktop app with vcpkg-managed FLTK",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "/opt/homebrew/opt/llvm/bin/clang-scan-deps",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "ON",
+        "CMAKE_CXX_MODULE_STD": "ON",
+        "CMAKE_CXX_STDLIB_MODULES_JSON": "/opt/homebrew/opt/llvm/lib/c++/libc++.modules.json",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/vcpkg-from-env.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-homebrew-llvm",
+        "VCPKG_HOST_TRIPLET": "arm64-osx-homebrew-llvm",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-triplets",
+        "BOXING_TRAINER_BUILD_GUI": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "desktop-release-vcpkg",
+      "displayName": "Size-optimized release desktop app with vcpkg-managed FLTK",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "/opt/homebrew/opt/llvm/bin/clang-scan-deps",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "ON",
+        "CMAKE_CXX_MODULE_STD": "ON",
+        "CMAKE_CXX_STDLIB_MODULES_JSON": "/opt/homebrew/opt/llvm/lib/c++/libc++.modules.json",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+        "CMAKE_EXE_LINKER_FLAGS_MINSIZEREL": "-Wl,-dead_strip",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/vcpkg-from-env.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-homebrew-llvm",
+        "VCPKG_HOST_TRIPLET": "arm64-osx-homebrew-llvm",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-triplets",
+        "BOXING_TRAINER_BUILD_GUI": "ON",
+        "BUILD_TESTING": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "core-tests",
+      "configurePreset": "core-tests"
+    },
+    {
+      "name": "desktop-vcpkg",
+      "configurePreset": "desktop-vcpkg"
+    },
+    {
+      "name": "desktop-release-vcpkg",
+      "configurePreset": "desktop-release-vcpkg"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "core-tests",
+      "configurePreset": "core-tests",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "desktop-vcpkg",
+      "configurePreset": "desktop-vcpkg",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "core-tests",
+      "displayName": "Configure, build, and test the core library",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "core-tests"
+        },
+        {
+          "type": "build",
+          "name": "core-tests"
+        },
+        {
+          "type": "test",
+          "name": "core-tests"
+        }
+      ]
+    },
+    {
+      "name": "desktop-vcpkg",
+      "displayName": "Configure, build, and test the desktop app with vcpkg",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "desktop-vcpkg"
+        },
+        {
+          "type": "build",
+          "name": "desktop-vcpkg"
+        },
+        {
+          "type": "test",
+          "name": "desktop-vcpkg"
+        }
+      ]
+    },
+    {
+      "name": "desktop-release-vcpkg",
+      "displayName": "Configure and build a size-optimized release desktop app with vcpkg",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "desktop-release-vcpkg"
+        },
+        {
+          "type": "build",
+          "name": "desktop-release-vcpkg"
+        }
+      ]
+    }
+  ]
+}
