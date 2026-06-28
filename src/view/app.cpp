@@ -124,8 +124,14 @@ public:
 private:
     using Callback = std::function<void()>;
 
+    struct SearchFocusState {
+        int position = 0;
+        int mark = 0;
+    };
+
     void rebuild() {
         rebuilding_ = true;
+        focus_after_rebuild_ = nullptr;
         callbacks_.clear();
         clear();
         begin();
@@ -144,7 +150,12 @@ private:
         }
 
         end();
+        if (focus_after_rebuild_ != nullptr) {
+            focus_after_rebuild_->take_focus();
+        }
         redraw();
+        search_focus_after_rebuild_.reset();
+        focus_after_rebuild_ = nullptr;
         rebuilding_ = false;
     }
 
@@ -205,10 +216,15 @@ private:
             input->when(FL_WHEN_CHANGED);
             bind(*input, [this, input] {
                 if (!rebuilding_) {
+                    search_focus_after_rebuild_ = SearchFocusState{
+                        .position = input->position(),
+                        .mark = input->mark(),
+                    };
                     model_.main().set_search_query(input->value());
                     rebuild();
                 }
             });
+            restore_search_focus(*input);
             y += 38;
         }
 
@@ -437,8 +453,26 @@ private:
         search_visible_ = !search_visible_;
         if (!search_visible_) {
             model_.main().set_search_query("");
+        } else {
+            const auto end_position = static_cast<int>(model_.main().search_query().size());
+            search_focus_after_rebuild_ = SearchFocusState{
+                .position = end_position,
+                .mark = end_position,
+            };
         }
         rebuild();
+    }
+
+    void restore_search_focus(Fl_Input& input) {
+        if (!search_focus_after_rebuild_) {
+            return;
+        }
+
+        const auto max_position = static_cast<int>(std::string_view{input.value()}.size());
+        const auto position = std::clamp(search_focus_after_rebuild_->position, 0, max_position);
+        const auto mark = std::clamp(search_focus_after_rebuild_->mark, 0, max_position);
+        input.position(position, mark);
+        focus_after_rebuild_ = &input;
     }
 
     void show_current_combination_video() {
@@ -473,6 +507,8 @@ private:
     model::Model model_;
     bool search_visible_ = false;
     bool rebuilding_ = false;
+    std::optional<SearchFocusState> search_focus_after_rebuild_;
+    Fl_Input* focus_after_rebuild_ = nullptr;
     std::vector<std::unique_ptr<Callback>> callbacks_;
 };
 
