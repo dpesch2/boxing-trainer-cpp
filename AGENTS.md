@@ -10,7 +10,7 @@ This is a modern C++23 port of the Go/Fyne boxing trainer. The project uses:
 - Homebrew LLVM on macOS arm64.
 - C++23 named modules and `import std;`.
 - wxWidgets for the desktop UI, provided through vcpkg.
-- A small in-repo test executable driven by CTest.
+- Catch2 tests driven by CTest.
 
 Treat the repository as a C++23 codebase first. Do not rewrite code toward older C++ standards for portability unless the user explicitly asks for that tradeoff.
 
@@ -18,9 +18,10 @@ Treat the repository as a C++23 codebase first. Do not rewrite code toward older
 
 Use the checked-in CMake presets instead of hand-written configure commands.
 
-Core parser/model tests without GUI dependencies:
+Core parser/model tests without GUI dependencies. This still uses vcpkg for Catch2:
 
 ```sh
+export VCPKG_ROOT="$HOME/vcpkg"
 cmake --workflow --preset core-tests
 ```
 
@@ -82,27 +83,32 @@ Prefer current, idiomatic C++23 facilities where they make the code clearer, saf
 
 - Add source files to the appropriate `target_sources` file set when creating new module units.
 - Keep vcpkg dependencies declared in `vcpkg.json`.
+- Keep test dependencies such as Catch2 behind the `tests` manifest feature.
+- Keep GUI-only dependencies such as wxWidgets behind the `gui` manifest feature.
 - Keep macOS arm64 vcpkg triplet behavior in `vcpkg-triplets/arm64-osx-homebrew-llvm.cmake`.
 - Avoid absolute source paths in checked-in files. Presets should use `${sourceDir}` or relative paths.
-- If a dependency is only needed by the GUI, keep the core test preset independent of it.
+- If a dependency is only needed by the GUI, keep the core test preset independent of that manifest feature.
 
 ## Testing Expectations
 
 For changes to parser, model, URL handling, or shared utilities, run:
 
 ```sh
+export VCPKG_ROOT="$HOME/vcpkg"
 cmake --workflow --preset core-tests
 ```
 
 For changes that affect wxWidgets UI code, CMake/vcpkg configuration, or the final executable, also run:
 
 ```sh
+export VCPKG_ROOT="$HOME/vcpkg"
 cmake --workflow --preset desktop-vcpkg
 ```
 
 For release-build settings, run:
 
 ```sh
+export VCPKG_ROOT="$HOME/vcpkg"
 cmake --workflow --preset desktop-release-vcpkg
 ```
 

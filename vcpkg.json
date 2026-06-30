@@ -2,10 +2,21 @@
   "name": "boxing-trainer-cpp",
   "version-string": "0.1.0",
   "description": "Modern C++/wxWidgets port of boxing-trainer-go.",
-  "dependencies": [
-    {
-      "name": "wxwidgets",
-      "default-features": false
+  "features": {
+    "tests": {
+      "description": "Build the Catch2 test executable.",
+      "dependencies": [
+        "catch2"
+      ]
+    },
+    "gui": {
+      "description": "Build the wxWidgets desktop UI.",
+      "dependencies": [
+        {
+          "name": "wxwidgets",
+          "default-features": false
+        }
+      ]
     }
-  ]
+  }
 }

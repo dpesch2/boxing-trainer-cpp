@@ -77,12 +77,18 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+    find_package(Catch2 3 REQUIRED)
+
     add_executable(boxing_trainer_tests
         tests/test_main.cpp)
 
-    target_link_libraries(boxing_trainer_tests PRIVATE boxing_trainer_core)
+    target_link_libraries(boxing_trainer_tests PRIVATE boxing_trainer_core Catch2::Catch2WithMain)
     boxing_trainer_enable_cxx23_modules(boxing_trainer_tests PRIVATE)
     boxing_trainer_enable_project_warnings(boxing_trainer_tests)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(boxing_trainer_tests PRIVATE -Wno-c2y-extensions)
+    endif()
 
-    add_test(NAME boxing_trainer_tests COMMAND boxing_trainer_tests)
+    include(Catch)
+    catch_discover_tests(boxing_trainer_tests)
 endif()

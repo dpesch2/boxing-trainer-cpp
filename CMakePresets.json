@@ -21,6 +21,11 @@
         "CMAKE_CXX_SCAN_FOR_MODULES": "ON",
         "CMAKE_CXX_MODULE_STD": "ON",
         "CMAKE_CXX_STDLIB_MODULES_JSON": "/opt/homebrew/opt/llvm/lib/c++/libc++.modules.json",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/vcpkg-from-env.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-homebrew-llvm",
+        "VCPKG_HOST_TRIPLET": "arm64-osx-homebrew-llvm",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-triplets",
+        "VCPKG_MANIFEST_FEATURES": "tests",
         "BOXING_TRAINER_BUILD_GUI": "OFF",
         "BUILD_TESTING": "ON"
       }
@@ -44,6 +49,7 @@
         "VCPKG_TARGET_TRIPLET": "arm64-osx-homebrew-llvm",
         "VCPKG_HOST_TRIPLET": "arm64-osx-homebrew-llvm",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-triplets",
+        "VCPKG_MANIFEST_FEATURES": "gui;tests",
         "BOXING_TRAINER_BUILD_GUI": "ON",
         "BUILD_TESTING": "ON"
       }
@@ -69,6 +75,7 @@
         "VCPKG_TARGET_TRIPLET": "arm64-osx-homebrew-llvm",
         "VCPKG_HOST_TRIPLET": "arm64-osx-homebrew-llvm",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-triplets",
+        "VCPKG_MANIFEST_FEATURES": "gui",
         "BOXING_TRAINER_BUILD_GUI": "ON",
         "BUILD_TESTING": "OFF"
       }

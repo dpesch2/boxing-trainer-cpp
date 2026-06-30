@@ -1,4 +1,5 @@
-#include <cstdio>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 import std;
 import boxing_trainer.combo;
@@ -12,41 +13,24 @@ extern "C" int setenv(const char*, const char*, int);
 #endif
 
 using namespace boxing_trainer;
+using Catch::Matchers::ContainsSubstring;
 
 namespace {
 
-struct TestFailure : std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
-
-struct TestCase {
-    std::string_view name;
-    std::function<void()> run;
-};
-
-template <typename T, typename U>
-void require_equal(const T& got, const U& want, std::string_view context) {
-    if (!(got == want)) {
-        throw TestFailure(std::format("{} mismatch", context));
-    }
+void require_contains(std::string_view text, std::string_view needle) {
+    REQUIRE_THAT(std::string{text}, ContainsSubstring(std::string{needle}));
 }
 
-void require_true(bool value, std::string_view context) {
-    if (!value) {
-        throw TestFailure(std::string{context});
+template <typename Action>
+void require_runtime_error_contains(Action action, std::string_view needle) {
+    bool thrown = false;
+    try {
+        action();
+    } catch (const std::runtime_error& err) {
+        thrown = true;
+        require_contains(err.what(), needle);
     }
-}
-
-void require_false(bool value, std::string_view context) {
-    if (value) {
-        throw TestFailure(std::string{context});
-    }
-}
-
-void require_contains(std::string_view text, std::string_view needle, std::string_view context) {
-    if (text.find(needle) == std::string_view::npos) {
-        throw TestFailure(std::format("{} expected {} to contain {}", context, text, needle));
-    }
+    REQUIRE(thrown);
 }
 
 std::filesystem::path unique_temp_home(std::string_view test_name) {
@@ -107,164 +91,146 @@ std::set<std::string> as_set(std::initializer_list<std::string_view> items) {
     return out;
 }
 
-void test_parser_edge_cases() {
+} // namespace
+
+TEST_CASE("parser handles comments, variables, and field errors", "[combo]") {
     std::set<std::string> vars;
     std::map<std::string, std::string> values;
 
-    require_true(combo::parse_comment("   "), "whitespace comment");
-    require_false(combo::parse_var_defs("var ", vars), "empty var name");
-    require_false(combo::parse_var_assignments("missing=1", vars, values), "undefined var assignment");
+    CHECK(combo::parse_comment("   "));
+    CHECK(combo::parse_comment(""));
+    CHECK(combo::parse_comment("# comment"));
+    CHECK_FALSE(combo::parse_comment("not comment"));
 
-    auto res = combo::parse_combination("just-a-description", 10, values);
-    require_false(res.has_value(), "missing fields error");
-    require_contains(res.error(), "expect 3 elements", "field count error");
+    CHECK_FALSE(combo::parse_var_defs("var ", vars));
+    CHECK(combo::parse_var_defs("var foo", vars));
+    CHECK(vars.contains("foo"));
+    CHECK_FALSE(combo::parse_var_defs("variable foo", vars));
+
+    CHECK(combo::parse_var_assignments("foo=123", vars, values));
+    CHECK(values.at("foo") == "123");
+    CHECK_FALSE(combo::parse_var_assignments("missing=1", vars, values));
+    CHECK_FALSE(combo::parse_var_assignments("bar=123", vars, values));
+
+    auto missing_fields = combo::parse_combination("just-a-description", 10, values);
+    REQUIRE_FALSE(missing_fields.has_value());
+    require_contains(missing_fields.error(), "expect 3 elements");
+
+    auto short_row = combo::parse_combination("1-2;", 7, values);
+    REQUIRE_FALSE(short_row.has_value());
+    require_contains(short_row.error(), "expect 3 elements");
+
+    auto missing_url = combo::parse_combination("1-2; 1m20s;", 7, values);
+    REQUIRE_FALSE(missing_url.has_value());
+    require_contains(missing_url.error(), "missing at line 7 `url` value");
 }
 
-void test_parse_combination() {
+TEST_CASE("parser creates combinations with derived features", "[combo]") {
     const std::map<std::string, std::string> values{{"url", "https://example.com"}};
     const auto got = combo::parse_combination("1-1-2-step_back-2; 1m20s;", 0, values);
 
-    require_true(got.has_value(), "parse combination success");
+    REQUIRE(got.has_value());
     const auto& result = got.value();
-    require_equal(result.description, std::string{"1-1-2-step_back-2"}, "description");
-    require_true(result.features.is_long, "long feature");
-    require_true(result.features.has_defense, "defense feature");
-    require_false(result.features.is_feint, "faint feature");
-    require_false(result.features.targets_body, "body feature");
-    require_false(result.features.is_counter, "counter feature");
-    require_equal(result.url, std::string{"https://example.com"}, "url");
-    require_equal(result.position, std::string{"1m20s"}, "position");
-    require_equal(result.comment, std::string{}, "comment");
-    require_equal(result.values.at("lineNo"), std::string{"0"}, "lineNo value");
+    CHECK(result.description == "1-1-2-step_back-2");
+    CHECK(result.features.is_long);
+    CHECK(result.features.has_defense);
+    CHECK_FALSE(result.features.is_feint);
+    CHECK_FALSE(result.features.targets_body);
+    CHECK_FALSE(result.features.is_counter);
+    CHECK(result.url == "https://example.com");
+    CHECK(result.position == "1m20s");
+    CHECK(result.comment.empty());
+    CHECK(result.values.at("lineNo") == "0");
 }
 
-void test_parse_errors_and_variables() {
-    std::set<std::string> vars;
-    std::map<std::string, std::string> values;
+TEST_CASE("feature extraction and timestamp handling match the data format", "[combo]") {
+    CHECK(combo::extract_long("f1 jab"));
+    CHECK(combo::extract_long("2-cross"));
+    CHECK(combo::extract_long("long_3 hook"));
+    CHECK(combo::extract_long("setup attack"));
+    CHECK_FALSE(combo::extract_long("setup close"));
+    CHECK_FALSE(combo::extract_long("unknown"));
 
-    require_true(combo::parse_comment(""), "blank comment");
-    require_true(combo::parse_comment("# comment"), "hash comment");
-    require_false(combo::parse_comment("not comment"), "non-comment");
+    CHECK(combo::extract_defense("slip and counter"));
+    CHECK(combo::extract_defense("step back"));
+    CHECK_FALSE(combo::extract_defense("movement only"));
 
-    require_true(combo::parse_var_defs("var foo", vars), "var definition");
-    require_true(vars.contains("foo"), "var set contains foo");
-    require_false(combo::parse_var_defs("variable foo", vars), "invalid var definition");
+    CHECK(combo::extract_faint("f1-2-3"));
+    CHECK(combo::extract_faint("f2-3-2"));
+    CHECK_FALSE(combo::extract_faint("no f"));
 
-    require_true(combo::parse_var_assignments("foo=123", vars, values), "var assignment");
-    require_equal(values.at("foo"), std::string{"123"}, "var value");
-    require_false(combo::parse_var_assignments("bar=123", vars, values), "unknown assignment");
+    CHECK(combo::extract_body("1b-2-3"));
+    CHECK(combo::extract_body("6b-5-3"));
+    CHECK_FALSE(combo::extract_body("face punch"));
 
-    try {
-        auto got = combo::parse_combination("1-2;", 7, values);
-        require_false(got.has_value(), "expected field count error");
-        require_contains(got.error(), "expect 3 elements", "field count error");
-    } catch (const std::exception& err) {
-        throw TestFailure(std::format("unexpected exception: {}", err.what()));
-    }
-
-    try {
-        auto got = combo::parse_combination("1-2; 1m20s;", 7, values);
-        require_false(got.has_value(), "expected missing URL error");
-        require_contains(got.error(), "missing at line 7 `url` value", "missing URL error");
-    } catch (const std::exception& err) {
-        throw TestFailure(std::format("unexpected exception: {}", err.what()));
-    }
-}
-
-void test_feature_extraction_and_youtube_timestamps() {
-    require_true(combo::extract_long("f1 jab"), "f1 long");
-    require_true(combo::extract_long("2-cross"), "2 long");
-    require_true(combo::extract_long("long_3 hook"), "long_3 long");
-    require_true(combo::extract_long("setup attack"), "setup long");
-    require_false(combo::extract_long("setup close"), "setup close short");
-    require_false(combo::extract_long("unknown"), "unknown short");
-
-    require_true(combo::extract_defense("slip and counter"), "slip defense");
-    require_true(combo::extract_defense("step back"), "step defense");
-    require_false(combo::extract_defense("movement only"), "movement defense");
-
-    require_true(combo::extract_faint("f1-2-3"), "f1 faint");
-    require_true(combo::extract_faint("f2-3-2"), "f2 faint");
-    require_false(combo::extract_faint("no f"), "no faint");
-    require_true(combo::extract_body("1b-2-3"), "1b body");
-    require_true(combo::extract_body("6b-5-3"), "6b body");
-    require_false(combo::extract_body("face punch"), "no body");
-    require_true(combo::extract_counter("COUNTER 1-2-3"), "counter");
-    require_false(combo::extract_counter("1-2-3"), "not counter");
+    CHECK(combo::extract_counter("COUNTER 1-2-3"));
+    CHECK_FALSE(combo::extract_counter("1-2-3"));
 
     const auto minute_url = combo::create_url_with_location("https://youtube.com/watch?v=abc", "1m20s", 7);
-    require_true(minute_url.has_value(), "youtube minute timestamp success");
-    require_equal(minute_url.value(), std::string{"https://youtube.com/watch?v=abc&t=1m20s"}, "youtube minute timestamp");
+    REQUIRE(minute_url.has_value());
+    CHECK(minute_url.value() == "https://youtube.com/watch?v=abc&t=1m20s");
 
     const auto second_url = combo::create_url_with_location("https://youtube.com/watch?v=abc", "59s", 7);
-    require_true(second_url.has_value(), "youtube second timestamp success");
-    require_equal(second_url.value(), std::string{"https://youtube.com/watch?v=abc&t=59s"}, "youtube second timestamp");
+    REQUIRE(second_url.has_value());
+    CHECK(second_url.value() == "https://youtube.com/watch?v=abc&t=59s");
 
     const auto non_youtube_url = combo::create_url_with_location("https://example.com/video", "90s", 7);
-    require_true(non_youtube_url.has_value(), "non-youtube timestamp success");
-    require_equal(non_youtube_url.value(), std::string{"https://example.com/video"}, "non-youtube unchanged");
+    REQUIRE(non_youtube_url.has_value());
+    CHECK(non_youtube_url.value() == "https://example.com/video");
 
-    try {
-        auto got = combo::create_url_with_location("https://youtube.com/watch?v=abc", "90s", 7);
-        require_false(got.has_value(), "expected invalid timestamp error");
-        require_contains(got.error(), "invalid timestamp at line 7", "timestamp error");
-    } catch (const std::exception& err) {
-        throw TestFailure(std::format("unexpected exception: {}", err.what()));
-    }
+    const auto invalid_timestamp = combo::create_url_with_location("https://youtube.com/watch?v=abc", "90s", 7);
+    REQUIRE_FALSE(invalid_timestamp.has_value());
+    require_contains(invalid_timestamp.error(), "invalid timestamp at line 7");
 }
 
-void test_load_embedded_data_copy() {
+TEST_CASE("embedded data loads", "[combo]") {
     const auto data_result = combo::load_data();
-    if (!data_result) {
-        throw TestFailure(std::format("Error loading data: {}", data_result.error()));
-    }
+    REQUIRE(data_result.has_value());
+
     const auto& data = data_result.value();
-    require_true(data.size() > 100, "loaded data size");
-    require_false(data.front().description.empty(), "first loaded description");
-    require_true(data.front().values.contains("author"), "first loaded values include author");
+    CHECK(data.size() > 100);
+    CHECK_FALSE(data.front().description.empty());
+    CHECK(data.front().values.contains("author"));
 }
 
-void test_enums_and_match() {
-    require_equal(model::to_string(model::FilterSelection::all), std::string{"All"}, "All string");
-    require_equal(model::to_string(model::FilterSelection::yes), std::string{"Yes"}, "Yes string");
-    require_equal(model::to_string(model::FilterSelection::no), std::string{"No"}, "No string");
-    require_equal(model::selection_from_string("Yes"), model::FilterSelection::yes, "selection Yes");
-    require_equal(model::selection_from_string("No"), model::FilterSelection::no, "selection No");
-    require_equal(model::selection_from_string("invalid"), model::FilterSelection::all, "selection invalid");
-    require_equal(model::to_string(model::SortOrder::in_order), std::string{"InOrder"}, "order InOrder");
-    require_equal(model::to_string(model::SortOrder::random), std::string{"Random"}, "order Random");
-    require_equal(model::order_from_string("Random"), model::SortOrder::random, "order parse random");
-    require_equal(model::order_from_string("invalid"), model::SortOrder::in_order, "order parse invalid");
+TEST_CASE("model enum conversion and filters are stable", "[model]") {
+    CHECK(model::to_string(model::FilterSelection::all) == "All");
+    CHECK(model::to_string(model::FilterSelection::yes) == "Yes");
+    CHECK(model::to_string(model::FilterSelection::no) == "No");
+    CHECK(model::selection_from_string("Yes") == model::FilterSelection::yes);
+    CHECK(model::selection_from_string("No") == model::FilterSelection::no);
+    CHECK(model::selection_from_string("invalid") == model::FilterSelection::all);
+    CHECK(model::to_string(model::SortOrder::in_order) == "InOrder");
+    CHECK(model::to_string(model::SortOrder::random) == "Random");
+    CHECK(model::order_from_string("Random") == model::SortOrder::random);
+    CHECK(model::order_from_string("invalid") == model::SortOrder::in_order);
 
-    require_true(model::matches_filter(model::FilterSelection::all, true), "all true");
-    require_true(model::matches_filter(model::FilterSelection::all, false), "all false");
-    require_true(model::matches_filter(model::FilterSelection::yes, true), "yes true");
-    require_false(model::matches_filter(model::FilterSelection::yes, false), "yes false");
-    require_false(model::matches_filter(model::FilterSelection::no, true), "no true");
-    require_true(model::matches_filter(model::FilterSelection::no, false), "no false");
+    CHECK(model::matches_filter(model::FilterSelection::all, true));
+    CHECK(model::matches_filter(model::FilterSelection::all, false));
+    CHECK(model::matches_filter(model::FilterSelection::yes, true));
+    CHECK_FALSE(model::matches_filter(model::FilterSelection::yes, false));
+    CHECK_FALSE(model::matches_filter(model::FilterSelection::no, true));
+    CHECK(model::matches_filter(model::FilterSelection::no, false));
 }
 
-void test_main_model_empty_and_header() {
+TEST_CASE("main model handles empty state and header text", "[model]") {
     unique_temp_home("main-empty");
     model::MainModel empty;
 
-    require_equal(empty.combination_name(), std::string{"None"}, "empty name");
-    require_equal(empty.comment(), std::string{}, "empty comment");
-    require_true(empty.values() == nullptr, "empty values");
-    try {
-        (void)empty.current_combination();
-        throw TestFailure("expected current combination error");
-    } catch (const std::runtime_error& err) {
-        require_contains(err.what(), "no current combination", "current combination error");
-    }
+    CHECK(empty.combination_name() == "None");
+    CHECK(empty.comment().empty());
+    CHECK(empty.values() == nullptr);
+    require_runtime_error_contains(
+        [&empty] { (void)empty.current_combination(); },
+        "no current combination");
 
     model::MainModel m({make_combo("combo-1", {}, "work the jab")});
     m.add_favorite("combo-1");
-    require_contains(m.header_label(), "★", "favorite header");
-    require_contains(m.header_label(), "work the jab", "header comment");
+    require_contains(m.header_label(), "★");
+    require_contains(m.header_label(), "work the jab");
 }
 
-void test_filters_and_favorite_flag() {
+TEST_CASE("main model filters include favorite flags", "[model]") {
     unique_temp_home("filters-favorites");
     model::MainModel m({
         make_combo("fav-combo", {.is_long = true, .is_feint = true, .is_counter = true}),
@@ -280,11 +246,12 @@ void test_filters_and_favorite_flag() {
     selection.favorites = model::FilterSelection::yes;
     m.set_selection(selection);
 
-    require_equal(combination_names(m.combinations()), std::vector<std::string>{"fav-combo"}, "favorite filtered names");
-    require_true(m.combinations().front().is_favorite, "favorite flag carried");
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"fav-combo"});
+    REQUIRE_FALSE(m.combinations().empty());
+    CHECK(m.combinations().front().is_favorite);
 }
 
-void test_search_behavior() {
+TEST_CASE("search matches descriptions, comments, and ranking", "[model]") {
     unique_temp_home("search");
     model::MainModel m({
         make_combo("jab cross"),
@@ -293,9 +260,9 @@ void test_search_behavior() {
     });
 
     m.set_search_query("cross");
-    require_equal(combination_names(m.combinations()), std::vector<std::string>{"jab cross"}, "search description");
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"jab cross"});
     m.set_search_query("angle");
-    require_equal(combination_names(m.combinations()), std::vector<std::string>{"slip roll"}, "search comment");
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"slip roll"});
 
     model::MainModel ranking({
         make_combo("abcxxxx"),
@@ -303,10 +270,7 @@ void test_search_behavior() {
         make_combo("nomatch"),
     });
     ranking.set_search_query("abcdef");
-    require_equal(
-        combination_names(ranking.combinations()),
-        std::vector<std::string>{"abcdef", "abcxxxx"},
-        "search ranking score");
+    CHECK(combination_names(ranking.combinations()) == std::vector<std::string>{"abcdef", "abcxxxx"});
 
     model::MainModel tie({
         make_combo("abcde-one"),
@@ -314,19 +278,16 @@ void test_search_behavior() {
         make_combo("abcde-two"),
     });
     tie.set_search_query("abcde");
-    require_equal(
-        combination_names(tie.combinations()),
-        std::vector<std::string>{"abcde", "abcde-one", "abcde-two"},
-        "search tie ranking");
+    CHECK(combination_names(tie.combinations()) == std::vector<std::string>{"abcde", "abcde-one", "abcde-two"});
 
     model::MainModel no_match({make_combo("abcde"), make_combo("fghij")});
     no_match.set(1);
     no_match.set_search_query("zzzzz");
-    require_true(no_match.combinations().empty(), "search no match empty");
-    require_equal(no_match.current(), 0, "search no match clamps current");
+    CHECK(no_match.combinations().empty());
+    CHECK(no_match.current() == 0);
 }
 
-void test_search_composes_with_filters_and_does_not_persist() {
+TEST_CASE("search composes with filters and is not persisted", "[model]") {
     unique_temp_home("search-filter");
     model::MainModel m({
         make_combo("abcde-long", {.is_long = true}),
@@ -337,86 +298,80 @@ void test_search_composes_with_filters_and_does_not_persist() {
     auto selection = m.selection();
     selection.long_range = model::FilterSelection::yes;
     m.set_selection(selection);
-    require_equal(
-        combination_names(m.combinations()),
-        std::vector<std::string>{"abcde-long", "other-long"},
-        "filter before search");
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"abcde-long", "other-long"});
 
     m.set_search_query("abcde");
-    require_equal(combination_names(m.combinations()), std::vector<std::string>{"abcde-long"}, "search with filter");
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"abcde-long"});
     m.set_search_query("");
-    require_equal(
-        combination_names(m.combinations()),
-        std::vector<std::string>{"abcde-long", "other-long"},
-        "clear search preserves filter");
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"abcde-long", "other-long"});
 
     unique_temp_home("search-not-persisted");
     model::MainModel search_state({make_combo("abcdef")});
     search_state.set_search_query("abcdef");
-    require_equal(model::load_state(), model::AppState{}, "search not persisted");
+    CHECK(model::load_state() == model::AppState{});
 }
 
-void test_navigation_and_state() {
+TEST_CASE("navigation and persisted state work together", "[model]") {
     unique_temp_home("navigation");
     model::MainModel m({make_combo("c1"), make_combo("c2"), make_combo("c3")});
 
     m.next();
-    require_equal(m.current(), 1, "next current 1");
-    require_equal(m.number(), 2, "next number 2");
+    CHECK(m.current() == 1);
+    CHECK(m.number() == 2);
     m.next();
-    require_equal(m.current(), 2, "next current 2");
+    CHECK(m.current() == 2);
     m.next();
-    require_equal(m.current(), 0, "next wraps");
+    CHECK(m.current() == 0);
     m.previous();
-    require_equal(m.current(), 2, "previous wraps");
+    CHECK(m.current() == 2);
     m.set(0);
-    require_equal(m.current(), 0, "set current");
-    require_equal(m.number(), 6, "set increments number");
+    CHECK(m.current() == 0);
+    CHECK(m.number() == 6);
     m.reset();
-    require_equal(m.current(), 0, "reset current");
-    require_equal(m.number(), 1, "reset number");
+    CHECK(m.current() == 0);
+    CHECK(m.number() == 1);
 
     auto selection = m.selection();
     selection.long_range = model::FilterSelection::yes;
     m.set_selection(selection);
     const auto state = model::load_state();
-    require_equal(state.selection.long_range, model::FilterSelection::yes, "selection persisted");
+    CHECK(state.selection.long_range == model::FilterSelection::yes);
 }
 
-void test_favorite_persistence_and_toggle() {
+TEST_CASE("favorites persist sorted values and toggle on the model", "[model]") {
     const auto home = unique_temp_home("favorites");
     model::save_favorites({"zeta", "alpha", "hook"});
     const auto favorites_path = home / ".boxing-trainer" / "favorites";
     std::ifstream input(favorites_path);
     const std::string content{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
-    require_equal(content, std::string{"alpha\nhook\nzeta"}, "favorites sorted content");
+    CHECK(content == "alpha\nhook\nzeta");
 
     {
         std::ofstream output(favorites_path, std::ios::trunc);
-        constexpr std::string_view content =
+        constexpr std::string_view duplicate_content =
             "  jab-cross  \n"
             "\n"
             "hook\n"
             "jab-cross\n";
-        output.write(content.data(), static_cast<std::streamsize>(content.size()));
+        output.write(duplicate_content.data(), static_cast<std::streamsize>(duplicate_content.size()));
     }
-    require_equal(model::load_favorites(), std::set<std::string>({"hook", "jab-cross"}), "favorites load trims dedupes");
+    CHECK(model::load_favorites() == std::set<std::string>({"hook", "jab-cross"}));
 
     unique_temp_home("favorite-toggle");
     model::MainModel m({make_combo("jab-cross")});
     m.toggle_favorite();
-    require_true(m.is_favorite("jab-cross"), "favorite after toggle");
-    require_contains(m.combinations().front().label(), "★", "favorite label");
-    require_true(model::load_favorites().contains("jab-cross"), "favorite persisted");
+    CHECK(m.is_favorite("jab-cross"));
+    require_contains(m.combinations().front().label(), "★");
+    CHECK(model::load_favorites().contains("jab-cross"));
     m.toggle_favorite();
-    require_false(m.is_favorite("jab-cross"), "favorite removed");
-    require_false(m.combinations().front().label().find("★") != std::string::npos, "favorite marker removed");
+    CHECK_FALSE(m.is_favorite("jab-cross"));
+    CHECK(m.combinations().front().label().find("★") == std::string::npos);
 
     model::MainModel empty;
     empty.toggle_favorite();
 }
 
-void test_state_persistence() {
+TEST_CASE("state roundtrips and rejects invalid JSON", "[model]") {
     unique_temp_home("state");
     const model::AppState want{
         .current = 2,
@@ -433,7 +388,7 @@ void test_state_persistence() {
         },
     };
     model::save_state(want);
-    require_equal(model::load_state(), want, "state roundtrip");
+    CHECK(model::load_state() == want);
 
     const auto home = unique_temp_home("state-invalid");
     const auto path = home / ".boxing-trainer" / "state-2.json";
@@ -443,15 +398,12 @@ void test_state_persistence() {
         constexpr std::string_view content = "{";
         output.write(content.data(), static_cast<std::streamsize>(content.size()));
     }
-    try {
-        (void)model::load_state();
-        throw TestFailure("expected invalid JSON state error");
-    } catch (const std::runtime_error& err) {
-        require_contains(err.what(), "unmarshal state file", "invalid state error");
-    }
+    require_runtime_error_contains(
+        [] { (void)model::load_state(); },
+        "unmarshal state file");
 }
 
-void test_load_restores_state_and_clamps() {
+TEST_CASE("loading state restores filters and clamps current index", "[model]") {
     unique_temp_home("load-state");
     model::save_state(model::AppState{
         .current = 5,
@@ -466,27 +418,27 @@ void test_load_restores_state_and_clamps() {
     });
     m.load();
 
-    require_equal(m.current(), 0, "load clamps current");
-    require_equal(m.number(), 12, "load number");
-    require_equal(m.selection().long_range, model::FilterSelection::yes, "load selection");
-    require_equal(combination_names(m.combinations()), std::vector<std::string>{"long"}, "load filters");
+    CHECK(m.current() == 0);
+    CHECK(m.number() == 12);
+    CHECK(m.selection().long_range == model::FilterSelection::yes);
+    CHECK(combination_names(m.combinations()) == std::vector<std::string>{"long"});
 }
 
-void test_random_order_deterministic() {
+TEST_CASE("random order is deterministic for a fixed seed", "[model]") {
     unique_temp_home("random-order");
     model::MainModel m1({make_combo("c1"), make_combo("c2"), make_combo("c3"), make_combo("c4")});
     model::MainModel m2({make_combo("c1"), make_combo("c2"), make_combo("c3"), make_combo("c4")});
     m1.reset_in_random_order(42);
     m2.reset_in_random_order(42);
-    require_equal(m1.order(), m2.order(), "same seed order");
+    CHECK(m1.order() == m2.order());
 
     m1.reset_in_order();
-    require_equal(m1.order(), std::vector<int>{0, 1, 2, 3}, "reset in order");
-    require_equal(m1.sort_order(), model::SortOrder::in_order, "reset sort order");
-    require_equal(m1.seed(), std::uint64_t{0}, "reset seed");
+    CHECK(m1.order() == std::vector<int>{0, 1, 2, 3});
+    CHECK(m1.sort_order() == model::SortOrder::in_order);
+    CHECK(m1.seed() == std::uint64_t{0});
 }
 
-void test_defense_model() {
+TEST_CASE("defense model chooses candidates from the selected range", "[model]") {
     using enum model::FilterSelection;
 
     const std::vector<std::pair<model::DefenseViewSelection, std::set<std::string>>> cases{
@@ -501,25 +453,25 @@ void test_defense_model() {
         {{no, no}, as_set({"4", "5", "6"})},
     };
     for (const auto& [selection, want] : cases) {
-        require_equal(as_set(model::defense_candidates(selection)), want, "defense candidates");
+        CHECK(as_set(model::defense_candidates(selection)) == want);
     }
 
     model::DefenseModel m;
-    require_equal(m.header_label(), std::string{"1. "}, "defense header");
-    require_equal(std::string{m.combination_name()}, std::string{"1"}, "defense current");
+    CHECK(m.header_label() == "1. ");
+    CHECK(m.combination_name() == "1");
     m.set_selection({no, no});
     for (int i = 0; i < 20; ++i) {
         m.next_attack();
-        require_true(as_set({"4", "5", "6"}).contains(std::string{m.combination_name()}), "next attack selection");
+        CHECK(as_set({"4", "5", "6"}).contains(std::string{m.combination_name()}));
     }
-    require_equal(m.header_label(), std::string{"21. "}, "defense counter");
-    require_false(m.pause(), "pause initially false");
+    CHECK(m.header_label() == "21. ");
+    CHECK_FALSE(m.pause());
     m.toggle_pause();
-    require_true(m.pause(), "pause toggled true");
+    CHECK(m.pause());
 }
 
-void test_video_url() {
-    const std::vector<std::pair<std::string, bool>> cases{
+TEST_CASE("video URL allowlist accepts supported video hosts only", "[video]") {
+    static constexpr std::array<std::pair<std::string_view, bool>, 12> cases{{
         {"https://youtube.com/watch?v=abc", true},
         {"https://www.youtube.com/watch?v=abc", true},
         {"https://youtu.be/abc", true},
@@ -532,62 +484,20 @@ void test_video_url() {
         {"https://notyoutube.example/watch", false},
         {"https://youtube.com.evil.example/watch", false},
         {"://youtube.com", false},
-    };
+    }};
 
-    for (const auto& [url, want] : cases) {
-        require_equal(view::video_url(url).has_value(), want, std::format("video url {}", url));
+    for (const auto [url, want] : cases) {
+        CAPTURE(url);
+        CHECK(view::video_url(url).has_value() == want);
     }
 }
 
-void test_misc_ui_helpers() {
-    require_equal(model::yes_no_to_bool(true), std::string{"yes"}, "yes bool");
-    require_equal(model::yes_no_to_bool(false), std::string{"no"}, "no bool");
+TEST_CASE("miscellaneous UI helpers keep simple contracts", "[model]") {
+    CHECK(model::yes_no_to_bool(true) == "yes");
+    CHECK(model::yes_no_to_bool(false) == "no");
     for (int i = 0; i < 20; ++i) {
         const auto delay = model::next_delay();
-        require_true(delay >= std::chrono::seconds{3}, "delay lower bound");
-        require_true(delay < std::chrono::seconds{6}, "delay upper bound");
+        CHECK(delay >= std::chrono::seconds{3});
+        CHECK(delay < std::chrono::seconds{6});
     }
-}
-
-} // namespace
-
-int main() {
-    const std::vector<TestCase> tests{
-        {"parser_edge_cases", test_parser_edge_cases},
-        {"parse_combination", test_parse_combination},
-        {"parse_errors_and_variables", test_parse_errors_and_variables},
-        {"feature_extraction_and_youtube_timestamps", test_feature_extraction_and_youtube_timestamps},
-        {"load_embedded_data_copy", test_load_embedded_data_copy},
-        {"enums_and_match", test_enums_and_match},
-        {"main_model_empty_and_header", test_main_model_empty_and_header},
-        {"filters_and_favorite_flag", test_filters_and_favorite_flag},
-        {"search_behavior", test_search_behavior},
-        {"search_composes_with_filters_and_does_not_persist", test_search_composes_with_filters_and_does_not_persist},
-        {"navigation_and_state", test_navigation_and_state},
-        {"favorite_persistence_and_toggle", test_favorite_persistence_and_toggle},
-        {"state_persistence", test_state_persistence},
-        {"load_restores_state_and_clamps", test_load_restores_state_and_clamps},
-        {"random_order_deterministic", test_random_order_deterministic},
-        {"defense_model", test_defense_model},
-        {"video_url", test_video_url},
-        {"misc_ui_helpers", test_misc_ui_helpers},
-    };
-
-    int failed = 0;
-    for (const auto& test : tests) {
-        try {
-            test.run();
-            std::println("[PASS] {}", test.name);
-        } catch (const std::exception& err) {
-            ++failed;
-            std::println(stderr, "[FAIL] {}: {}", test.name, err.what());
-        }
-    }
-
-    if (failed != 0) {
-        std::println(stderr, "{} test(s) failed", failed);
-        return 1;
-    }
-    std::println("{} test(s) passed", tests.size());
-    return 0;
 }
