@@ -12,6 +12,13 @@ constexpr std::string_view favorites_file_rel = ".boxing-trainer/favorites";
 constexpr std::size_t search_triplet_size = 3;
 std::mutex favorites_mutex;
 
+template <typename Values>
+[[nodiscard]] auto find_string(Values& values, std::string_view needle) {
+    return std::ranges::find_if(values, [needle](const std::string& value) {
+        return value == needle;
+    });
+}
+
 [[nodiscard]] std::vector<std::string> split_search_triplets(std::string_view query) {
     const auto normalized = collapse_whitespace_lower(query);
     if (normalized.size() < search_triplet_size) {
@@ -26,16 +33,57 @@ std::mutex favorites_mutex;
     return out;
 }
 
-[[nodiscard]] TripletSet triplet_set_from_text(std::string_view text) {
-    TripletSet out;
-    for (auto&& triplet : split_search_triplets(text)) {
-        out.insert(std::move(triplet));
+void insert_normalized_search_triplets(TripletSet& out, std::string_view normalized) {
+    if (normalized.size() < search_triplet_size) {
+        return;
+    }
+
+    for (std::size_t i = 0; i <= normalized.size() - search_triplet_size; ++i) {
+        out.emplace(normalized.substr(i, search_triplet_size));
+    }
+}
+
+void append_collapsed_whitespace_lower(std::string& out, std::string_view text, bool& last_was_space) {
+    for (const auto ch : text) {
+        if (std::isspace(static_cast<unsigned char>(ch))) {
+            if (!last_was_space) {
+                out.push_back(' ');
+                last_was_space = true;
+            }
+        } else {
+            out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+            last_was_space = false;
+        }
+    }
+}
+
+void append_search_separator(std::string& out, bool& last_was_space) {
+    if (!out.empty() && !last_was_space) {
+        out.push_back(' ');
+    }
+    last_was_space = true;
+}
+
+[[nodiscard]] std::string collapsed_combination_search_text(const combo::Combination& combination) {
+    std::string out;
+    out.reserve(combination.description.size() + 1 + combination.comment.size());
+
+    bool last_was_space = true;
+    append_collapsed_whitespace_lower(out, combination.description, last_was_space);
+    append_search_separator(out, last_was_space);
+    append_collapsed_whitespace_lower(out, combination.comment, last_was_space);
+
+    if (!out.empty() && out.back() == ' ') {
+        out.pop_back();
     }
     return out;
 }
 
 [[nodiscard]] TripletSet triplets_for_combination(const combo::Combination& combination) {
-    return triplet_set_from_text(std::format("{} {}", combination.description, combination.comment));
+    const auto normalized = collapsed_combination_search_text(combination);
+    TripletSet out;
+    insert_normalized_search_triplets(out, normalized);
+    return out;
 }
 
 [[nodiscard]] std::vector<TripletSet> build_combination_search_triplets(
@@ -65,8 +113,8 @@ struct SearchResult {
 
     std::vector<CombinationItem> out;
     out.reserve(results.size());
-    for (const auto& result : results) {
-        out.push_back(result.item);
+    for (auto& result : results) {
+        out.push_back(std::move(result.item));
     }
     return out;
 }
@@ -378,15 +426,19 @@ void MainModel::set_selection(MainViewSelection selection) {
 }
 
 std::string MainModel::header_label() const {
-    std::string favorite;
-    if (!filtered_.empty() && is_favorite(combination_name())) {
-        favorite = "★";
+    std::string_view favorite;
+    std::string_view comment_text;
+    if (!filtered_.empty()) {
+        const auto& item = filtered_.at(static_cast<std::size_t>(current_));
+        const auto& combination = item.combination.get();
+        favorite = favorites_.contains(combination.description) ? "★" : "";
+        comment_text = combination.comment;
     }
 
-    return std::format("{}. ({}) {} {}", number_, filtered_.size(), favorite, comment());
+    return std::format("{}. ({}) {} {}", number_, filtered_.size(), favorite, comment_text);
 }
 
-std::string MainModel::combination_name() const {
+std::string_view MainModel::combination_name() const noexcept {
     if (filtered_.empty()) {
         return "None";
     }
@@ -414,7 +466,7 @@ const CombinationItem& MainModel::current_combination() const {
     return filtered_.at(static_cast<std::size_t>(current_));
 }
 
-std::string MainModel::comment() const {
+std::string_view MainModel::comment() const noexcept {
     if (filtered_.empty()) {
         return {};
     }
@@ -429,7 +481,7 @@ const std::map<std::string, std::string>* MainModel::values() const {
 }
 
 bool MainModel::is_favorite(std::string_view name) const {
-    return favorites_.contains(std::string{name});
+    return find_string(favorites_, name) != favorites_.end();
 }
 
 void MainModel::add_favorite(std::string name) {
@@ -438,7 +490,9 @@ void MainModel::add_favorite(std::string name) {
 }
 
 void MainModel::remove_favorite(std::string_view name) {
-    favorites_.erase(std::string{name});
+    if (const auto it = find_string(favorites_, name); it != favorites_.end()) {
+        favorites_.erase(it);
+    }
     save_favorites(favorites_);
 }
 
@@ -449,7 +503,7 @@ void MainModel::toggle_favorite() {
 
     auto& current_combo = filtered_.at(static_cast<std::size_t>(current_));
     const auto& name = current_combo.combination.get().description;
-    if (!is_favorite(name)) {
+    if (!current_combo.is_favorite) {
         add_favorite(name);
         current_combo.is_favorite = true;
     } else {
@@ -532,7 +586,7 @@ void MainModel::load() {
 
 std::vector<CombinationItem> MainModel::filter_combinations() const {
     const auto search_active = has_search_query();
-    const auto query_triplets = split_search_triplets(search_query_);
+    const auto query_triplets = search_active ? split_search_triplets(search_query_) : std::vector<std::string>{};
     std::vector<CombinationItem> out;
     out.reserve(source_.size());
     std::vector<SearchResult> matches;
@@ -544,15 +598,17 @@ std::vector<CombinationItem> MainModel::filter_combinations() const {
             continue;
         }
 
-        const CombinationItem combo_model{.combination = std::cref(combination), .is_favorite = is_favorite(combination.description)};
+        const auto favorite = favorites_.contains(combination.description);
         if (!search_active) {
-            out.push_back(combo_model);
+            out.push_back(CombinationItem{.combination = std::cref(combination), .is_favorite = favorite});
             continue;
         }
 
         const auto score = search_score(source_index, query_triplets);
         if (score > 0) {
-            matches.push_back(SearchResult{.item = combo_model, .score = score});
+            matches.push_back(SearchResult{
+                .item = CombinationItem{.combination = std::cref(combination), .is_favorite = favorite},
+                .score = score});
         }
     }
 
@@ -608,28 +664,25 @@ int MainModel::search_score(int source_index, const std::vector<std::string>& qu
         return 0;
     }
 
-    const auto target_triplets = triplets_for_source_index(source_index);
-    if (target_triplets.empty()) {
+    const auto* target_triplets = triplets_for_source_index(source_index);
+    if (target_triplets == nullptr || target_triplets->empty()) {
         return 0;
     }
 
     int score = 0;
     for (const auto& triplet : query_triplets) {
-        if (target_triplets.contains(triplet)) {
+        if (target_triplets->contains(triplet)) {
             ++score;
         }
     }
     return score;
 }
 
-TripletSet MainModel::triplets_for_source_index(int source_index) const {
+const TripletSet* MainModel::triplets_for_source_index(int source_index) const noexcept {
     if (source_index >= 0 && source_index < static_cast<int>(search_triplets_.size())) {
-        return search_triplets_.at(static_cast<std::size_t>(source_index));
+        return &search_triplets_.at(static_cast<std::size_t>(source_index));
     }
-    if (source_index < 0 || source_index >= static_cast<int>(source_.size())) {
-        return {};
-    }
-    return triplets_for_combination(source_.at(static_cast<std::size_t>(source_index)));
+    return nullptr;
 }
 
 std::string DefenseModel::header_label() const {

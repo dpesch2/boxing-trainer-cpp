@@ -93,10 +93,10 @@ public:
     void set_selection(MainViewSelection selection);
 
     [[nodiscard]] std::string header_label() const;
-    [[nodiscard]] std::string combination_name() const;
+    [[nodiscard]] std::string_view combination_name() const noexcept;
     [[nodiscard]] std::string title() const;
     [[nodiscard]] const CombinationItem& current_combination() const;
-    [[nodiscard]] std::string comment() const;
+    [[nodiscard]] std::string_view comment() const noexcept;
     [[nodiscard]] const std::map<std::string, std::string>* values() const;
 
     [[nodiscard]] bool is_favorite(std::string_view name) const;
@@ -122,7 +122,7 @@ private:
 
     [[nodiscard]] bool has_search_query() const;
     [[nodiscard]] int search_score(int source_index, const std::vector<std::string>& query_triplets) const;
-    [[nodiscard]] TripletSet triplets_for_source_index(int source_index) const;
+    [[nodiscard]] const TripletSet* triplets_for_source_index(int source_index) const noexcept;
 
     int number_ = 1;
     int current_ = 0;

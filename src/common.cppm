@@ -33,8 +33,8 @@ export namespace boxing_trainer {
     return value.find(needle) != std::string_view::npos;
 }
 
-[[nodiscard]] std::vector<std::string> split(std::string_view value, char delimiter) {
-    std::vector<std::string> parts;
+[[nodiscard]] std::vector<std::string_view> split_view(std::string_view value, char delimiter) {
+    std::vector<std::string_view> parts;
     std::size_t start = 0;
     while (start <= value.size()) {
         const auto pos = value.find(delimiter, start);
@@ -44,6 +44,17 @@ export namespace boxing_trainer {
         }
         parts.emplace_back(value.substr(start, pos - start));
         start = pos + 1;
+    }
+    return parts;
+}
+
+[[nodiscard]] std::vector<std::string> split(std::string_view value, char delimiter) {
+    const auto views = split_view(value, delimiter);
+
+    std::vector<std::string> parts;
+    parts.reserve(views.size());
+    for (const auto part : views) {
+        parts.emplace_back(part);
     }
     return parts;
 }

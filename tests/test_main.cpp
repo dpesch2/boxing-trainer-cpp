@@ -20,7 +20,7 @@ struct TestFailure : std::runtime_error {
 };
 
 struct TestCase {
-    std::string name;
+    std::string_view name;
     std::function<void()> run;
 };
 
@@ -94,7 +94,7 @@ template <std::ranges::input_range Range>
 std::set<std::string> as_set(Range&& items) {
     std::set<std::string> out;
     for (const auto& item : items) {
-        out.emplace(std::string{item});
+        out.emplace(item);
     }
     return out;
 }
@@ -125,7 +125,7 @@ void test_parse_combination() {
     const auto got = combo::parse_combination("1-1-2-step_back-2; 1m20s;", 0, values);
 
     require_true(got.has_value(), "parse combination success");
-    const auto result = got.value();
+    const auto& result = got.value();
     require_equal(result.description, std::string{"1-1-2-step_back-2"}, "description");
     require_true(result.features.is_long, "long feature");
     require_true(result.features.has_defense, "defense feature");
@@ -218,7 +218,7 @@ void test_load_embedded_data_copy() {
     if (!data_result) {
         throw TestFailure(std::format("Error loading data: {}", data_result.error()));
     }
-    const auto data = data_result.value();
+    const auto& data = data_result.value();
     require_true(data.size() > 100, "loaded data size");
     require_false(data.front().description.empty(), "first loaded description");
     require_true(data.front().values.contains("author"), "first loaded values include author");

@@ -56,6 +56,100 @@ constexpr char delimiter = ';';
     return false;
 }
 
+[[nodiscard]] char lower_ascii_char(char ch) noexcept {
+    if (ch >= 'A' && ch <= 'Z') {
+        return static_cast<char>(ch - 'A' + 'a');
+    }
+    return ch;
+}
+
+[[nodiscard]] bool contains_ascii_case_insensitive(std::string_view value, std::string_view needle) noexcept {
+    if (needle.empty()) {
+        return true;
+    }
+    if (needle.size() > value.size()) {
+        return false;
+    }
+
+    for (std::size_t start = 0; start <= value.size() - needle.size(); ++start) {
+        bool matched = true;
+        for (std::size_t offset = 0; offset < needle.size(); ++offset) {
+            if (lower_ascii_char(value[start + offset]) != lower_ascii_char(needle[offset])) {
+                matched = false;
+                break;
+            }
+        }
+        if (matched) {
+            return true;
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] bool extract_long_from_parts(std::span<const std::string_view> parts) {
+    if (parts.empty()) {
+        return false;
+    }
+
+    const auto first = parts.front();
+    static constexpr std::array<std::string_view, 6> long_prefixes{
+        "1", "2", "f1", "long_3", "counter_1", "counter_2"};
+    for (const auto prefix : long_prefixes) {
+        if (first == prefix) {
+            return true;
+        }
+    }
+
+    if (first == "setup") {
+        return std::ranges::none_of(parts, [](std::string_view part) { return part == "close"; });
+    }
+
+    return false;
+}
+
+[[nodiscard]] bool extract_defense_from_parts(std::span<const std::string_view> parts) {
+    static constexpr std::array<std::string_view, 9> keywords{
+        "slip", "step", "lean", "roll", "escape", "pivot", "duck", "parry", "block"};
+
+    for (const auto part : parts) {
+        for (const auto keyword : keywords) {
+            if (contains_ascii_case_insensitive(part, keyword)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] bool extract_faint_from_parts(std::span<const std::string_view> parts) {
+    return std::ranges::any_of(parts, [](std::string_view part) {
+        return starts_with(part, "f1") || starts_with(part, "f2");
+    });
+}
+
+[[nodiscard]] bool extract_body_from_parts(std::span<const std::string_view> parts) {
+    static constexpr std::array<std::string_view, 6> keywords{"1b", "2b", "3b", "4b", "5b", "6b"};
+    for (const auto part : parts) {
+        for (const auto keyword : keywords) {
+            if (part == keyword || contains(part, keyword)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] CombinationFeatures extract_features(std::string_view description) {
+    const auto parts = split_description(description);
+    return CombinationFeatures{
+        .is_long = extract_long_from_parts(parts),
+        .has_defense = extract_defense_from_parts(parts),
+        .is_feint = extract_faint_from_parts(parts),
+        .targets_body = extract_body_from_parts(parts),
+        .is_counter = contains_ascii_case_insensitive(description, "counter"),
+    };
+}
+
 } // namespace
 
 bool parse_comment(std::string_view line) {
@@ -97,7 +191,7 @@ std::expected<Combination, std::string> parse_combination(
     std::string_view line,
     std::int64_t line_no,
     const std::map<std::string, std::string>& values) {
-    const auto parts = split(line, delimiter);
+    const auto parts = split_view(line, delimiter);
     if (parts.size() != field_count) {
         return std::unexpected(std::format(
             R"(expect {} elements delimited by ";" in "{}")",
@@ -125,13 +219,7 @@ std::expected<Combination, std::string> parse_combination(
 
     return Combination{
         .description = std::string{description},
-        .features = CombinationFeatures{
-            .is_long = extract_long(description),
-            .has_defense = extract_defense(description),
-            .is_feint = extract_faint(description),
-            .targets_body = extract_body(description),
-            .is_counter = extract_counter(description),
-        },
+        .features = extract_features(description),
         .url = std::move(url.value()),
         .position = std::string{location},
         .comment = std::string{trim(parts[2])},
@@ -141,69 +229,31 @@ std::expected<Combination, std::string> parse_combination(
 
 bool extract_long(std::string_view description) {
     const auto parts = split_description(description);
-    if (parts.empty()) {
-        return false;
-    }
-
-    const auto& first = parts.front();
-    static constexpr std::array<std::string_view, 6> long_prefixes{
-        "1", "2", "f1", "long_3", "counter_1", "counter_2"};
-    for (const auto& prefix : long_prefixes) {
-        if (first == prefix) {
-            return true;
-        }
-    }
-
-    if (first == "setup") {
-        return std::ranges::none_of(parts, [](const auto& part) { return part == "close"; });
-    }
-
-    return false;
+    return extract_long_from_parts(parts);
 }
 
 bool extract_defense(std::string_view description) {
-    static constexpr std::array keywords{
-        "slip", "step", "lean", "roll", "escape", "pivot", "duck", "parry", "block"};
-
-    for (const auto& part : split_description(description)) {
-        const auto lower = lower_ascii(part);
-        for (const auto keyword : keywords) {
-            if (contains(lower, keyword)) {
-                return true;
-            }
-        }
-    }
-    return false;
+    const auto parts = split_description(description);
+    return extract_defense_from_parts(parts);
 }
 
 bool extract_faint(std::string_view description) {
-    for (const auto& part : split_description(description)) {
-        if (starts_with(part, "f1") || starts_with(part, "f2")) {
-            return true;
-        }
-    }
-    return false;
+    const auto parts = split_description(description);
+    return extract_faint_from_parts(parts);
 }
 
 bool extract_body(std::string_view description) {
-    static constexpr std::array keywords{"1b", "2b", "3b", "4b", "5b", "6b"};
-    for (const auto& part : split_description(description)) {
-        for (const auto keyword : keywords) {
-            if (part == keyword || contains(part, keyword)) {
-                return true;
-            }
-        }
-    }
-    return false;
+    const auto parts = split_description(description);
+    return extract_body_from_parts(parts);
 }
 
 bool extract_counter(std::string_view description) {
-    return contains(lower_ascii(description), "counter");
+    return contains_ascii_case_insensitive(description, "counter");
 }
 
-std::vector<std::string> split_description(std::string_view description) {
+std::vector<std::string_view> split_description(std::string_view description) {
     static constexpr std::array delimiters{'-', '+', ' '};
-    std::vector<std::string> cleaned;
+    std::vector<std::string_view> cleaned;
     std::size_t start = 0;
     while (start < description.size()) {
         const auto end = description.find_first_of(delimiters.data(), start, delimiters.size());

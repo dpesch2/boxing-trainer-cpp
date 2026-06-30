@@ -43,7 +43,7 @@ struct Combination {
 [[nodiscard]] bool extract_body(std::string_view description);
 [[nodiscard]] bool extract_counter(std::string_view description);
 
-[[nodiscard]] std::vector<std::string> split_description(std::string_view description);
+[[nodiscard]] std::vector<std::string_view> split_description(std::string_view description);
 [[nodiscard]] std::expected<std::string, std::string> create_url_with_location(
     std::string_view url,
     std::string_view timestamp,
