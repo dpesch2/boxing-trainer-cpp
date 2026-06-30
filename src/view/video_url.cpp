@@ -54,7 +54,7 @@ std::optional<std::string> video_url(std::string_view raw) {
     if (!is_allowed_video_host(parsed->host)) {
         return std::nullopt;
     }
-    return trim(raw);
+    return std::string{trim(raw)};
 }
 
 bool is_allowed_video_host(std::string_view host) {
@@ -63,7 +63,7 @@ bool is_allowed_video_host(std::string_view host) {
         "youtube.com", "youtu.be", "vimeo.com", "archive.org"};
 
     for (const auto domain : allowed) {
-        if (normalized == domain || normalized.ends_with("." + std::string{domain})) {
+        if (normalized == domain || normalized.ends_with(std::format(".{}", domain))) {
             return true;
         }
     }

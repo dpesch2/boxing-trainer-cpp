@@ -11,6 +11,9 @@
       "displayName": "Core tests without GUI dependencies",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build-core",
+      "warnings": {
+        "dev": false
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
@@ -27,6 +30,9 @@
       "displayName": "Desktop app with vcpkg-managed wxWidgets",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
+      "warnings": {
+        "dev": false
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
@@ -47,6 +53,9 @@
       "displayName": "Size-optimized release desktop app with vcpkg-managed wxWidgets",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build-release",
+      "warnings": {
+        "dev": false
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "MinSizeRel",
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",

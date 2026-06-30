@@ -4,7 +4,7 @@ import std;
 
 export namespace boxing_trainer {
 
-[[nodiscard]] std::string trim(std::string_view value) {
+[[nodiscard]] std::string_view trim(std::string_view value) {
     auto begin = value.begin();
     auto end = value.end();
     while (begin != end && std::isspace(static_cast<unsigned char>(*begin))) {
@@ -49,14 +49,24 @@ export namespace boxing_trainer {
 }
 
 [[nodiscard]] std::string collapse_whitespace_lower(std::string_view text) {
-    std::istringstream input(std::string{text});
-    std::string word;
     std::string out;
-    while (input >> word) {
-        if (!out.empty()) {
-            out.push_back(' ');
+    out.reserve(text.size());
+
+    bool last_was_space = true;
+    for (const auto ch : text) {
+        if (std::isspace(static_cast<unsigned char>(ch))) {
+            if (!last_was_space) {
+                out.push_back(' ');
+                last_was_space = true;
+            }
+        } else {
+            out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+            last_was_space = false;
         }
-        out.append(lower_ascii(word));
+    }
+
+    if (!out.empty() && out.back() == ' ') {
+        out.pop_back();
     }
     return out;
 }

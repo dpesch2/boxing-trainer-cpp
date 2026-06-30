@@ -271,20 +271,22 @@ private:
         try {
             const auto& current = model_.main().current_combination().combination.get();
             for (const auto& [key, value] : current.values) {
-                add_scroll_text(*scroll, *scroll_sizer, key + ": " + value);
+                add_scroll_text(*scroll, *scroll_sizer, std::format("{}: {}", key, value));
             }
 
-            add_scroll_text(*scroll, *scroll_sizer, "position: " + current.position);
+            add_scroll_text(*scroll, *scroll_sizer, std::format("position: {}", current.position));
 
             const auto& features = current.features;
             const std::string distance = features.is_long ? "long" : "short";
             add_scroll_text(
                 *scroll,
                 *scroll_sizer,
-                "distance: " + distance
-                    + ", defense: " + model::yes_no_to_bool(features.has_defense)
-                    + ", body: " + model::yes_no_to_bool(features.targets_body)
-                    + ", faint: " + model::yes_no_to_bool(features.is_feint));
+                std::format(
+                    "distance: {}, defense: {}, body: {}, faint: {}",
+                    distance,
+                    model::yes_no_to_bool(features.has_defense),
+                    model::yes_no_to_bool(features.targets_body),
+                    model::yes_no_to_bool(features.is_feint)));
 
             if (const auto url = video_url(current.url)) {
                 auto* open = new wxButton(scroll, wxID_ANY, "Open video");
@@ -593,7 +595,12 @@ private:
 
 int run_desktop_app(int argc, char** argv) {
     try {
-        auto* app = new TrainerApp(combo::load_data());
+        auto data_result = combo::load_data();
+        if (!data_result) {
+            std::println(stderr, "Boxing Trainer: {}", data_result.error());
+            return 1;
+        }
+        auto* app = new TrainerApp(std::move(data_result.value()));
         wxApp::SetInstance(app);
 
         int arg_count = argc;
@@ -614,7 +621,7 @@ int run_desktop_app(int argc, char** argv) {
         wxEntryCleanup();
         return result;
     } catch (const std::exception& err) {
-        std::fprintf(stderr, "Boxing Trainer: %s\n", err.what());
+        std::println(stderr, "Boxing Trainer: {}", err.what());
         return 1;
     }
 }

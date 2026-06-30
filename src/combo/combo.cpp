@@ -75,7 +75,7 @@ bool parse_var_defs(std::string_view line, std::set<std::string>& vars) {
         return false;
     }
 
-    vars.insert(name);
+    vars.emplace(name);
     return true;
 }
 
@@ -86,21 +86,21 @@ bool parse_var_assignments(
     auto cleaned = trim(line);
     for (const auto& var : vars) {
         if (cleaned.starts_with(var) && cleaned.substr(var.size()).starts_with('=')) {
-            values[var] = trim(std::string_view{cleaned}.substr(var.size() + 1));
+            values[var] = std::string{trim(cleaned.substr(var.size() + 1))};
             return true;
         }
     }
     return false;
 }
 
-Combination parse_combination(
+std::expected<Combination, std::string> parse_combination(
     std::string_view line,
     std::int64_t line_no,
     const std::map<std::string, std::string>& values) {
     const auto parts = split(line, delimiter);
     if (parts.size() != field_count) {
-        throw std::runtime_error(std::format(
-            "expect {} elements delimited by \";\" in \"{}\"",
+        return std::unexpected(std::format(
+            R"(expect {} elements delimited by ";" in "{}")",
             field_count,
             line));
     }
@@ -108,18 +108,23 @@ Combination parse_combination(
     const auto description = trim(parts[0]);
     const auto url_it = values.find("url");
     if (url_it == values.end() || trim(url_it->second).empty()) {
-        throw std::runtime_error(std::format(
-            "missing at line {} `url` value for combination: \"{}\"",
+        return std::unexpected(std::format(
+            R"(missing at line {} `url` value for combination: "{}")",
             line_no,
             line));
     }
 
     const auto location = trim(parts[1]);
+    const auto url = create_url_with_location(url_it->second, location, line_no);
+    if (!url) {
+        return std::unexpected(url.error());
+    }
+
     auto value_copy = values;
-    value_copy["lineNo"] = std::to_string(line_no);
+    value_copy["lineNo"] = std::format("{}", line_no);
 
     return Combination{
-        .description = description,
+        .description = std::string{description},
         .features = CombinationFeatures{
             .is_long = extract_long(description),
             .has_defense = extract_defense(description),
@@ -127,9 +132,9 @@ Combination parse_combination(
             .targets_body = extract_body(description),
             .is_counter = extract_counter(description),
         },
-        .url = create_url_with_location(url_it->second, location, line_no),
-        .position = location,
-        .comment = trim(parts[2]),
+        .url = std::move(url.value()),
+        .position = std::string{location},
+        .comment = std::string{trim(parts[2])},
         .values = std::move(value_copy),
     };
 }
@@ -204,7 +209,7 @@ std::vector<std::string> split_description(std::string_view description) {
         const auto end = description.find_first_of(delimiters.data(), start, delimiters.size());
         const auto value = trim(description.substr(start, end == std::string_view::npos ? end : end - start));
         if (!value.empty()) {
-            cleaned.push_back(std::move(value));
+            cleaned.emplace_back(value);
         }
         if (end == std::string_view::npos) {
             break;
@@ -214,7 +219,7 @@ std::vector<std::string> split_description(std::string_view description) {
     return cleaned;
 }
 
-std::string create_url_with_location(
+std::expected<std::string, std::string> create_url_with_location(
     std::string_view url,
     std::string_view timestamp,
     std::int64_t line_no) {
@@ -227,24 +232,20 @@ std::string create_url_with_location(
         return append_time_param(url, cleaned);
     }
 
-    throw std::runtime_error(std::format(
-        "invalid timestamp at line {} timestamp: {}",
+    return std::unexpected(std::format(
+        R"(invalid timestamp at line {} timestamp: {})",
         line_no,
         timestamp));
 }
 
 std::string append_time_param(std::string_view url, std::string_view timestamp) {
-    std::string out{url};
-    out += contains(url, "?") ? "&" : "?";
-    out += "t=";
-    out += timestamp;
-    return out;
+    return std::format("{}{}t={}", url, contains(url, "?") ? "&" : "?", timestamp);
 }
 
-std::vector<Combination> load_data(const std::filesystem::path& path) {
+std::expected<std::vector<Combination>, std::string> load_data(const std::filesystem::path& path) {
     std::ifstream input(path);
     if (!input) {
-        throw std::runtime_error("open combinations data: " + path.string());
+        return std::unexpected(std::format("open combinations data: {}", path.string()));
     }
 
     std::vector<Combination> data;
@@ -266,7 +267,11 @@ std::vector<Combination> load_data(const std::filesystem::path& path) {
         if (parse_var_assignments(cleaned, vars, values)) {
             continue;
         }
-        data.push_back(parse_combination(cleaned, line_no, values));
+        auto result = parse_combination(cleaned, line_no, values);
+        if (!result) {
+            return std::unexpected(result.error());
+        }
+        data.push_back(std::move(result.value()));
     }
     return data;
 }

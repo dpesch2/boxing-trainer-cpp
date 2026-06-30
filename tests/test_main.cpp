@@ -1,3 +1,5 @@
+#include <cstdio>
+
 import std;
 import boxing_trainer.combo;
 import boxing_trainer.model;
@@ -49,8 +51,10 @@ void require_contains(std::string_view text, std::string_view needle, std::strin
 
 std::filesystem::path unique_temp_home(std::string_view test_name) {
     auto path = std::filesystem::temp_directory_path()
-        / ("boxing-trainer-cpp-test-" + std::string{test_name} + "-"
-           + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        / std::format(
+            "boxing-trainer-cpp-test-{}-{}",
+            test_name,
+            std::chrono::steady_clock::now().time_since_epoch().count());
     std::filesystem::create_directories(path);
 #ifdef _WIN32
     _putenv_s("USERPROFILE", path.string().c_str());
@@ -103,20 +107,35 @@ std::set<std::string> as_set(std::initializer_list<std::string_view> items) {
     return out;
 }
 
+void test_parser_edge_cases() {
+    std::set<std::string> vars;
+    std::map<std::string, std::string> values;
+
+    require_true(combo::parse_comment("   "), "whitespace comment");
+    require_false(combo::parse_var_defs("var ", vars), "empty var name");
+    require_false(combo::parse_var_assignments("missing=1", vars, values), "undefined var assignment");
+
+    auto res = combo::parse_combination("just-a-description", 10, values);
+    require_false(res.has_value(), "missing fields error");
+    require_contains(res.error(), "expect 3 elements", "field count error");
+}
+
 void test_parse_combination() {
     const std::map<std::string, std::string> values{{"url", "https://example.com"}};
     const auto got = combo::parse_combination("1-1-2-step_back-2; 1m20s;", 0, values);
 
-    require_equal(got.description, std::string{"1-1-2-step_back-2"}, "description");
-    require_true(got.features.is_long, "long feature");
-    require_true(got.features.has_defense, "defense feature");
-    require_false(got.features.is_feint, "faint feature");
-    require_false(got.features.targets_body, "body feature");
-    require_false(got.features.is_counter, "counter feature");
-    require_equal(got.url, std::string{"https://example.com"}, "url");
-    require_equal(got.position, std::string{"1m20s"}, "position");
-    require_equal(got.comment, std::string{}, "comment");
-    require_equal(got.values.at("lineNo"), std::string{"0"}, "lineNo value");
+    require_true(got.has_value(), "parse combination success");
+    const auto result = got.value();
+    require_equal(result.description, std::string{"1-1-2-step_back-2"}, "description");
+    require_true(result.features.is_long, "long feature");
+    require_true(result.features.has_defense, "defense feature");
+    require_false(result.features.is_feint, "faint feature");
+    require_false(result.features.targets_body, "body feature");
+    require_false(result.features.is_counter, "counter feature");
+    require_equal(result.url, std::string{"https://example.com"}, "url");
+    require_equal(result.position, std::string{"1m20s"}, "position");
+    require_equal(result.comment, std::string{}, "comment");
+    require_equal(result.values.at("lineNo"), std::string{"0"}, "lineNo value");
 }
 
 void test_parse_errors_and_variables() {
@@ -136,17 +155,19 @@ void test_parse_errors_and_variables() {
     require_false(combo::parse_var_assignments("bar=123", vars, values), "unknown assignment");
 
     try {
-        (void)combo::parse_combination("1-2;", 7, values);
-        throw TestFailure("expected field count error");
-    } catch (const std::runtime_error& err) {
-        require_contains(err.what(), "expect 3 elements", "field count error");
+        auto got = combo::parse_combination("1-2;", 7, values);
+        require_false(got.has_value(), "expected field count error");
+        require_contains(got.error(), "expect 3 elements", "field count error");
+    } catch (const std::exception& err) {
+        throw TestFailure(std::format("unexpected exception: {}", err.what()));
     }
 
     try {
-        (void)combo::parse_combination("1-2; 1m20s;", 7, values);
-        throw TestFailure("expected missing URL error");
-    } catch (const std::runtime_error& err) {
-        require_contains(err.what(), "missing at line 7 `url` value", "missing URL error");
+        auto got = combo::parse_combination("1-2; 1m20s;", 7, values);
+        require_false(got.has_value(), "expected missing URL error");
+        require_contains(got.error(), "missing at line 7 `url` value", "missing URL error");
+    } catch (const std::exception& err) {
+        throw TestFailure(std::format("unexpected exception: {}", err.what()));
     }
 }
 
@@ -171,29 +192,33 @@ void test_feature_extraction_and_youtube_timestamps() {
     require_true(combo::extract_counter("COUNTER 1-2-3"), "counter");
     require_false(combo::extract_counter("1-2-3"), "not counter");
 
-    require_equal(
-        combo::create_url_with_location("https://youtube.com/watch?v=abc", "1m20s", 7),
-        std::string{"https://youtube.com/watch?v=abc&t=1m20s"},
-        "youtube minute timestamp");
-    require_equal(
-        combo::create_url_with_location("https://youtube.com/watch?v=abc", "59s", 7),
-        std::string{"https://youtube.com/watch?v=abc&t=59s"},
-        "youtube second timestamp");
-    require_equal(
-        combo::create_url_with_location("https://example.com/video", "90s", 7),
-        std::string{"https://example.com/video"},
-        "non-youtube unchanged");
+    const auto minute_url = combo::create_url_with_location("https://youtube.com/watch?v=abc", "1m20s", 7);
+    require_true(minute_url.has_value(), "youtube minute timestamp success");
+    require_equal(minute_url.value(), std::string{"https://youtube.com/watch?v=abc&t=1m20s"}, "youtube minute timestamp");
+
+    const auto second_url = combo::create_url_with_location("https://youtube.com/watch?v=abc", "59s", 7);
+    require_true(second_url.has_value(), "youtube second timestamp success");
+    require_equal(second_url.value(), std::string{"https://youtube.com/watch?v=abc&t=59s"}, "youtube second timestamp");
+
+    const auto non_youtube_url = combo::create_url_with_location("https://example.com/video", "90s", 7);
+    require_true(non_youtube_url.has_value(), "non-youtube timestamp success");
+    require_equal(non_youtube_url.value(), std::string{"https://example.com/video"}, "non-youtube unchanged");
 
     try {
-        (void)combo::create_url_with_location("https://youtube.com/watch?v=abc", "90s", 7);
-        throw TestFailure("expected invalid timestamp error");
-    } catch (const std::runtime_error& err) {
-        require_contains(err.what(), "invalid timestamp at line 7", "timestamp error");
+        auto got = combo::create_url_with_location("https://youtube.com/watch?v=abc", "90s", 7);
+        require_false(got.has_value(), "expected invalid timestamp error");
+        require_contains(got.error(), "invalid timestamp at line 7", "timestamp error");
+    } catch (const std::exception& err) {
+        throw TestFailure(std::format("unexpected exception: {}", err.what()));
     }
 }
 
 void test_load_embedded_data_copy() {
-    const auto data = combo::load_data();
+    const auto data_result = combo::load_data();
+    if (!data_result) {
+        throw TestFailure(std::format("Error loading data: {}", data_result.error()));
+    }
+    const auto data = data_result.value();
     require_true(data.size() > 100, "loaded data size");
     require_false(data.front().description.empty(), "first loaded description");
     require_true(data.front().values.contains("author"), "first loaded values include author");
@@ -368,7 +393,12 @@ void test_favorite_persistence_and_toggle() {
 
     {
         std::ofstream output(favorites_path, std::ios::trunc);
-        output << "  jab-cross  \n\nhook\njab-cross\n";
+        constexpr std::string_view content =
+            "  jab-cross  \n"
+            "\n"
+            "hook\n"
+            "jab-cross\n";
+        output.write(content.data(), static_cast<std::streamsize>(content.size()));
     }
     require_equal(model::load_favorites(), std::set<std::string>({"hook", "jab-cross"}), "favorites load trims dedupes");
 
@@ -410,7 +440,8 @@ void test_state_persistence() {
     std::filesystem::create_directories(path.parent_path());
     {
         std::ofstream output(path);
-        output << "{";
+        constexpr std::string_view content = "{";
+        output.write(content.data(), static_cast<std::streamsize>(content.size()));
     }
     try {
         (void)model::load_state();
@@ -504,7 +535,7 @@ void test_video_url() {
     };
 
     for (const auto& [url, want] : cases) {
-        require_equal(view::video_url(url).has_value(), want, "video url " + url);
+        require_equal(view::video_url(url).has_value(), want, std::format("video url {}", url));
     }
 }
 
@@ -522,6 +553,7 @@ void test_misc_ui_helpers() {
 
 int main() {
     const std::vector<TestCase> tests{
+        {"parser_edge_cases", test_parser_edge_cases},
         {"parse_combination", test_parse_combination},
         {"parse_errors_and_variables", test_parse_errors_and_variables},
         {"feature_extraction_and_youtube_timestamps", test_feature_extraction_and_youtube_timestamps},
@@ -545,17 +577,17 @@ int main() {
     for (const auto& test : tests) {
         try {
             test.run();
-            std::cout << "[PASS] " << test.name << '\n';
+            std::println("[PASS] {}", test.name);
         } catch (const std::exception& err) {
             ++failed;
-            std::cerr << "[FAIL] " << test.name << ": " << err.what() << '\n';
+            std::println(stderr, "[FAIL] {}: {}", test.name, err.what());
         }
     }
 
     if (failed != 0) {
-        std::cerr << failed << " test(s) failed\n";
+        std::println(stderr, "{} test(s) failed", failed);
         return 1;
     }
-    std::cout << tests.size() << " test(s) passed\n";
+    std::println("{} test(s) passed", tests.size());
     return 0;
 }

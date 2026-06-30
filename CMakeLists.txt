@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "451f2fe2-a8a2-47c3-bc32-94786d8fc91b")
 set(CMAKE_CXX_MODULE_STD ON)
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "Suppress expected CMake developer warnings")
 
 project(boxing_trainer_cpp
     VERSION 0.1.0
@@ -9,6 +10,10 @@ project(boxing_trainer_cpp
     LANGUAGES CXX)
 
 option(BOXING_TRAINER_BUILD_GUI "Build the wxWidgets desktop application" ON)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-reserved-module-identifier>)
+endif()
 
 function(boxing_trainer_enable_cxx23_modules target_name visibility)
     target_compile_features(${target_name} ${visibility} cxx_std_23)

@@ -35,7 +35,7 @@ std::mutex favorites_mutex;
 }
 
 [[nodiscard]] TripletSet triplets_for_combination(const combo::Combination& combination) {
-    return triplet_set_from_text(combination.description + " " + combination.comment);
+    return triplet_set_from_text(std::format("{} {}", combination.description, combination.comment));
 }
 
 [[nodiscard]] std::vector<TripletSet> build_combination_search_triplets(
@@ -76,7 +76,7 @@ struct SearchResult {
 }
 
 [[nodiscard]] int json_number_or(std::string_view json, std::string_view key, int fallback) {
-    const auto pattern = "\"" + std::string{key} + R"("\s*:\s*(-?\d+))";
+    const auto pattern = std::format(R"("{}"\s*:\s*(-?\d+))", key);
     const std::regex re{pattern};
     std::cmatch match;
     if (!std::regex_search(json.data(), json.data() + json.size(), match, re)) {
@@ -86,7 +86,7 @@ struct SearchResult {
 }
 
 [[nodiscard]] std::uint64_t json_uint64_or(std::string_view json, std::string_view key, std::uint64_t fallback) {
-    const auto pattern = "\"" + std::string{key} + R"("\s*:\s*(\d+))";
+    const auto pattern = std::format(R"("{}"\s*:\s*(\d+))", key);
     const std::regex re{pattern};
     std::cmatch match;
     if (!std::regex_search(json.data(), json.data() + json.size(), match, re)) {
@@ -123,7 +123,7 @@ void require_probably_json_object(std::string_view json) {
 
 std::string CombinationItem::label() const {
     const auto& description = combination.get().description;
-    return is_favorite ? description + " ★" : description;
+    return is_favorite ? std::format("{} ★", description) : description;
 }
 
 std::string to_string(FilterSelection selection) {
@@ -182,7 +182,7 @@ void ensure_config_dir(const std::filesystem::path& path, std::string_view label
     std::error_code ec;
     std::filesystem::create_directories(path.parent_path(), ec);
     if (ec) {
-        throw std::runtime_error("create " + std::string{label} + " directory: " + ec.message());
+        throw std::runtime_error(std::format("create {} directory: {}", label, ec.message()));
     }
 }
 
@@ -199,7 +199,7 @@ std::set<std::string> load_favorites() {
     while (std::getline(input, line)) {
         auto cleaned = trim(line);
         if (!cleaned.empty()) {
-            favorites.insert(std::move(cleaned));
+            favorites.emplace(cleaned);
         }
     }
     if (input.bad()) {
@@ -220,12 +220,17 @@ void save_favorites(const std::set<std::string>& favorites) {
     }
 
     bool first = true;
+    std::string content;
     for (const auto& favorite : favorites) {
         if (!first) {
-            output << '\n';
+            content.push_back('\n');
         }
         first = false;
-        output << favorite;
+        content.append(favorite);
+    }
+    output.write(content.data(), static_cast<std::streamsize>(content.size()));
+    if (!output) {
+        throw std::runtime_error("write favorites file");
     }
 }
 
@@ -272,19 +277,33 @@ void save_state(const AppState& state) {
         throw std::runtime_error("write state file");
     }
 
-    output
-        << "{\n"
-        << "  \"current\": " << state.current << ",\n"
-        << "  \"number\": " << state.number << ",\n"
-        << "  \"order\": " << std::to_underlying(state.sort_order) << ",\n"
-        << "  \"seed\": " << state.seed << ",\n"
-        << "  \"selection_long\": " << std::to_underlying(state.selection.long_range) << ",\n"
-        << "  \"selection_defense\": " << std::to_underlying(state.selection.defense) << ",\n"
-        << "  \"selection_faint\": " << std::to_underlying(state.selection.feint) << ",\n"
-        << "  \"selection_body\": " << std::to_underlying(state.selection.body) << ",\n"
-        << "  \"selection_counter\": " << std::to_underlying(state.selection.counter) << ",\n"
-        << "  \"selection_fav\": " << std::to_underlying(state.selection.favorites) << "\n"
-        << "}";
+    const auto json = std::format(
+        R"({{
+  "current": {},
+  "number": {},
+  "order": {},
+  "seed": {},
+  "selection_long": {},
+  "selection_defense": {},
+  "selection_faint": {},
+  "selection_body": {},
+  "selection_counter": {},
+  "selection_fav": {}
+}})",
+        state.current,
+        state.number,
+        std::to_underlying(state.sort_order),
+        state.seed,
+        std::to_underlying(state.selection.long_range),
+        std::to_underlying(state.selection.defense),
+        std::to_underlying(state.selection.feint),
+        std::to_underlying(state.selection.body),
+        std::to_underlying(state.selection.counter),
+        std::to_underlying(state.selection.favorites));
+    output.write(json.data(), static_cast<std::streamsize>(json.size()));
+    if (!output) {
+        throw std::runtime_error("write state file");
+    }
 }
 
 std::span<const std::string_view> defense_candidates(DefenseViewSelection selection) noexcept {
@@ -382,9 +401,10 @@ std::string MainModel::title() const {
     const auto& values = filtered_.at(static_cast<std::size_t>(current_)).combination.get().values;
     const auto author = values.find("author");
     const auto title_value = values.find("title");
-    return (author == values.end() ? std::string{} : author->second)
-        + ": "
-        + (title_value == values.end() ? std::string{} : title_value->second);
+    return std::format(
+        "{}: {}",
+        author == values.end() ? std::string_view{} : std::string_view{author->second},
+        title_value == values.end() ? std::string_view{} : std::string_view{title_value->second});
 }
 
 const CombinationItem& MainModel::current_combination() const {
@@ -613,7 +633,7 @@ TripletSet MainModel::triplets_for_source_index(int source_index) const {
 }
 
 std::string DefenseModel::header_label() const {
-    return std::to_string(number_) + ". ";
+    return std::format("{}. ", number_);
 }
 
 void DefenseModel::next_attack() {

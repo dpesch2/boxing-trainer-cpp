@@ -32,7 +32,7 @@ struct Combination {
     const std::set<std::string>& vars,
     std::map<std::string, std::string>& values);
 
-[[nodiscard]] Combination parse_combination(
+[[nodiscard]] std::expected<Combination, std::string> parse_combination(
     std::string_view line,
     std::int64_t line_no,
     const std::map<std::string, std::string>& values);
@@ -44,13 +44,13 @@ struct Combination {
 [[nodiscard]] bool extract_counter(std::string_view description);
 
 [[nodiscard]] std::vector<std::string> split_description(std::string_view description);
-[[nodiscard]] std::string create_url_with_location(
+[[nodiscard]] std::expected<std::string, std::string> create_url_with_location(
     std::string_view url,
     std::string_view timestamp,
     std::int64_t line_no);
 [[nodiscard]] std::string append_time_param(std::string_view url, std::string_view timestamp);
 
-[[nodiscard]] std::vector<Combination> load_data(
+[[nodiscard]] std::expected<std::vector<Combination>, std::string> load_data(
     const std::filesystem::path& path = std::filesystem::path{BOXING_TRAINER_RESOURCE_DIR} / "combinations.txt");
 
 } // namespace boxing_trainer::combo
